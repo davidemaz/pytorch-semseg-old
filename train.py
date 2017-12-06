@@ -27,8 +27,8 @@ def train(args):
     # Setup visdom for visualization
     vis = visdom.Visdom()
 
-    loss_window = vis.line(X=torch.zeros((1,)).cpu(),
-                           Y=torch.zeros((1)).cpu(),
+    loss_window = vis.line(X=torch.zeros(1),
+                           Y=torch.zeros(1),
                            opts=dict(xlabel='minibatches',
                                      ylabel='Loss',
                                      title='Training Loss',
@@ -36,7 +36,7 @@ def train(args):
 
     # Setup Model
     model = get_model(args.arch, n_classes)
-    
+
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
         test_image, test_segmap = loader[0]
@@ -65,8 +65,8 @@ def train(args):
             optimizer.step()
 
             vis.line(
-                X=torch.ones((1, 1)).cpu() * i,
-                Y=torch.Tensor([loss.data[0]]).unsqueeze(0).cpu(),
+                X=torch.ones(1) * i,
+                Y=torch.Tensor([loss.data[0]]),
                 win=loss_window,
                 update='append')
 
@@ -85,21 +85,21 @@ def train(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
-    parser.add_argument('--arch', nargs='?', type=str, default='fcn8s', 
+    parser.add_argument('--arch', nargs='?', type=str, default='fcn8s',
                         help='Architecture to use [\'fcn8s, unet, segnet etc\']')
-    parser.add_argument('--dataset', nargs='?', type=str, default='pascal', 
+    parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
                         help='Dataset to use [\'pascal, camvid, ade20k etc\']')
-    parser.add_argument('--img_rows', nargs='?', type=int, default=256, 
+    parser.add_argument('--img_rows', nargs='?', type=int, default=256,
                         help='Height of the input image')
-    parser.add_argument('--img_cols', nargs='?', type=int, default=256, 
+    parser.add_argument('--img_cols', nargs='?', type=int, default=256,
                         help='Height of the input image')
-    parser.add_argument('--n_epoch', nargs='?', type=int, default=100, 
+    parser.add_argument('--n_epoch', nargs='?', type=int, default=100,
                         help='# of the epochs')
-    parser.add_argument('--batch_size', nargs='?', type=int, default=1, 
+    parser.add_argument('--batch_size', nargs='?', type=int, default=1,
                         help='Batch Size')
-    parser.add_argument('--l_rate', nargs='?', type=float, default=1e-5, 
+    parser.add_argument('--l_rate', nargs='?', type=float, default=1e-5,
                         help='Learning Rate')
-    parser.add_argument('--feature_scale', nargs='?', type=int, default=1, 
-                        help='Divider for # of features to use')    
+    parser.add_argument('--feature_scale', nargs='?', type=int, default=1,
+                        help='Divider for # of features to use')
     args = parser.parse_args()
     train(args)
