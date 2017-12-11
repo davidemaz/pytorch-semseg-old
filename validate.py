@@ -26,11 +26,12 @@ def validate(args):
     # Setup Model
     model = torch.load(args.model_path)
     model.eval()
+    if torch.cuda.is_available() and not isinstance(model, nn.DataParallel):
+        model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
 
     gts, preds = [], []
     for i, (images, labels) in tqdm(enumerate(valloader)):
         if torch.cuda.is_available():
-            model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
             images = Variable(images.cuda(0))
             labels = Variable(labels.cuda(0))
         else:
@@ -38,9 +39,9 @@ def validate(args):
             labels = Variable(labels)
 
         outputs = model(images)
-        pred = np.squeeze(outputs.data.max(1)[1].cpu().numpy(), axis=1)
+        pred = outputs.data.max(1)[1].cpu().numpy()
         gt = labels.data.cpu().numpy()
-        
+
         for gt_, pred_ in zip(gt, pred):
             gts.append(gt_)
             preds.append(pred_)
@@ -55,17 +56,17 @@ def validate(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
-    parser.add_argument('--model_path', nargs='?', type=str, default='fcn8s_pascal_1_26.pkl', 
+    parser.add_argument('--model_path', nargs='?', type=str, default='fcn8s_pascal_1_26.pkl',
                         help='Path to the saved model')
-    parser.add_argument('--dataset', nargs='?', type=str, default='pascal', 
+    parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
                         help='Dataset to use [\'pascal, camvid, ade20k etc\']')
-    parser.add_argument('--img_rows', nargs='?', type=int, default=256, 
+    parser.add_argument('--img_rows', nargs='?', type=int, default=256,
                         help='Height of the input image')
-    parser.add_argument('--img_cols', nargs='?', type=int, default=256, 
+    parser.add_argument('--img_cols', nargs='?', type=int, default=256,
                         help='Height of the input image')
-    parser.add_argument('--batch_size', nargs='?', type=int, default=1, 
+    parser.add_argument('--batch_size', nargs='?', type=int, default=1,
                         help='Batch Size')
-    parser.add_argument('--split', nargs='?', type=str, default='val', 
+    parser.add_argument('--split', nargs='?', type=str, default='val',
                         help='Split of dataset to test on')
     args = parser.parse_args()
     validate(args)
