@@ -46,7 +46,7 @@ def validate(args):
             gts.append(gt_)
             preds.append(pred_)
 
-    score, class_iou = scores(gts, preds, n_class=n_classes)
+    score, class_iou = scores(gts, preds, n_classes=n_classes)
 
     for k, v in score.items():
         print(k, v)

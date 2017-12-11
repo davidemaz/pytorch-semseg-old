@@ -3,24 +3,24 @@
 
 import numpy as np
 
-def _fast_hist(label_true, label_pred, n_class):
-    mask = (label_true >= 0) & (label_true < n_class)
+def _confusion_matrix(gt, pred, n_classes):
+    mask = (gt >= 0) & (gt < n_classes)
     hist = np.bincount(
-        n_class * label_true[mask].astype(int) +
-        label_pred[mask], minlength=n_class**2).reshape(n_class, n_class)
+        n_classes * gt[mask].astype(int) +
+        pred[mask], minlength=n_classes**2).reshape(n_classes, n_classes)
     return hist
 
 
-def scores(label_trues, label_preds, n_class):
+def scores(gts, preds, n_classes):
     """Returns accuracy score evaluation result.
       - overall accuracy
       - mean accuracy
       - mean IU
       - fwavacc
     """
-    hist = np.zeros((n_class, n_class))
-    for lt, lp in zip(label_trues, label_preds):
-        hist += _fast_hist(lt.flatten(), lp.flatten(), n_class)
+    hist = np.zeros((n_classes, n_classes))
+    for lt, lp in zip(gts, preds):
+        hist += _confusion_matrix(lt.flatten(), lp.flatten(), n_classes)
     acc = np.diag(hist).sum() / hist.sum()
     acc_cls = np.diag(hist) / hist.sum(axis=1)
     acc_cls = np.nanmean(acc_cls)
@@ -28,7 +28,7 @@ def scores(label_trues, label_preds, n_class):
     mean_iu = np.nanmean(iu)
     freq = hist.sum(axis=1) / hist.sum()
     fwavacc = (freq[freq > 0] * iu[freq > 0]).sum()
-    cls_iu = dict(zip(range(n_class), iu))
+    cls_iu = dict(zip(range(n_classes), iu))
 
     return {'Overall Acc: \t': acc,
             'Mean Acc : \t': acc_cls,
