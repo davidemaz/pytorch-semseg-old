@@ -69,6 +69,7 @@ def main(args):
 def train(trainloader, model, criterion, optimizer, epoch):
     batch_time = AverageMeter()
     data_time = AverageMeter()
+    losses = AverageMeter()
 
     # Initialize current epoch log
     epoch_loss_window = vis.line(X=torch.zeros(1),
@@ -91,11 +92,11 @@ def train(trainloader, model, criterion, optimizer, epoch):
             images = Variable(images)
             labels = Variable(labels)
 
-        optimizer.zero_grad()
         outputs = model(images)
-
         loss = criterion(outputs, labels)
+        losses.update(loss.data[0], images.size(0))
 
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
@@ -112,10 +113,10 @@ def train(trainloader, model, criterion, optimizer, epoch):
         print('Epoch: [{}/{}][{}/{}] '
               'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
               'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-              'Loss: {loss.data[0]:.3f}'.format(
+              'Loss: {loss.val:.3f} ({loss.avg:.3f})'.format(
                 epoch+1, args.n_epoch, i,
-                math.ceil(trainloader.dataset.__len__()/trainloader.batch_size),
-                batch_time=batch_time, data_time=data_time, loss=loss))
+                math.floor(trainloader.dataset.__len__()/trainloader.batch_size),
+                batch_time=batch_time, data_time=data_time, loss=losses))
 
     vis.close(win=epoch_loss_window)
 
