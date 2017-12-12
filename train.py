@@ -3,11 +3,13 @@ import os.path
 import torch
 import visdom
 import argparse
+import time
+import math
+
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
-
 from torch.autograd import Variable
 from torch.utils import data
 
@@ -15,6 +17,7 @@ from ptsemseg.models import get_model
 from ptsemseg.loader import get_loader, get_data_path
 from ptsemseg.loss import cross_entropy2d
 from ptsemseg.metrics import scores
+from ptsemseg.utils import AverageMeter
 
 def main(args):
     global vis
@@ -64,6 +67,8 @@ def main(args):
                                                                                 args.feature_scale, epoch)))
 
 def train(trainloader, model, criterion, optimizer, epoch):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
 
     # Initialize current epoch log
     epoch_loss_window = vis.line(X=torch.zeros(1),
@@ -73,7 +78,12 @@ def train(trainloader, model, criterion, optimizer, epoch):
                                      title='Single Epoch Training Loss',
                                      legend=['Loss']))
 
+    model.train()
+
+    end = time.perf_counter()
     for i, (images, labels) in enumerate(trainloader):
+        # measure data loading time
+        data_time.update(time.perf_counter() - end)
         if torch.cuda.is_available():
             images = Variable(images.cuda(0))
             labels = Variable(labels.cuda(0))
@@ -89,13 +99,23 @@ def train(trainloader, model, criterion, optimizer, epoch):
         loss.backward()
         optimizer.step()
 
+        #measure elapsed time
+        batch_time.update(time.perf_counter() - end)
+        end = time.perf_counter()
+
         vis.line(
             X=torch.ones(1) * i,
             Y=torch.Tensor([loss.data[0]]),
             win=epoch_loss_window,
             update='append')
 
-        print("Epoch [%d/%d] Batch [%d/%d] Loss: %.4f" % (epoch+1, args.n_epoch, i, trainloader.dataset.__len__()/trainloader.batch_size, loss.data[0]))
+        print('Epoch: [{}/{}][{}/{}] '
+              'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+              'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+              'Loss: {loss.data[0]:.3f}'.format(
+                epoch+1, args.n_epoch, i,
+                math.ceil(trainloader.dataset.__len__()/trainloader.batch_size),
+                batch_time=batch_time, data_time=data_time, loss=loss))
 
     vis.close(win=epoch_loss_window)
 
