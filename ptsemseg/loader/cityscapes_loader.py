@@ -71,6 +71,11 @@ class cityscapesLoader(data.Dataset):
                             'pole', 'traffic_light', 'traffic_sign', 'vegetation', 'terrain',\
                             'sky', 'person', 'rider', 'car', 'truck', 'bus', 'train', \
                             'motorcycle', 'bicycle']
+        # Avg class size is used to weight instances during evaluation of iIoU
+        self.avg_class_size = [0,0,0,0,0,0,\
+                               0,0,0,0,0,\
+                               0,3462.4756337644,3930.4788056518,12794.0202738185,27855.1264367816,35732.1511111111,67583.7075812274,\
+                               6298.7200839748,4672.3249222261]
 
         self.class_map = dict(zip(self.valid_classes, range(1,20)))
 
