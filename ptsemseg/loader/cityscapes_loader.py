@@ -4,7 +4,9 @@ import numpy as np
 import scipy.misc as m
 
 from torch.utils import data
-
+if __name__ == '__main__':
+    import sys
+    sys.path.append(".")
 from ptsemseg.utils import recursive_glob
 
 
@@ -62,7 +64,7 @@ class cityscapesLoader(data.Dataset):
         self.annotations_base = os.path.join(self.root, 'gtFine_trainvaltest', 'gtFine', self.split)
 
         self.files[split] = recursive_glob(rootdir=self.images_base, suffix='.png')
-    
+
         self.void_classes = [0, 1, 2, 3, 4, 5, 6, 9, 10, 14, 15, 16, 18, 29, 30, -1]
         self.valid_classes = [7, 8, 11, 12, 13, 17, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 31, 32, 33]
         self.class_names = ['unlabelled', 'road', 'sidewalk', 'building', 'wall', 'fence',\
@@ -70,7 +72,7 @@ class cityscapesLoader(data.Dataset):
                             'sky', 'person', 'rider', 'car', 'truck', 'bus', 'train', \
                             'motorcycle', 'bicycle']
 
-        self.class_map = dict(zip(self.valid_classes, range(1,20))) 
+        self.class_map = dict(zip(self.valid_classes, range(1,20)))
 
         if not self.files[split]:
             raise Exception("No files for split=[%s] found in %s" % (split, self.images_base))
@@ -88,7 +90,7 @@ class cityscapesLoader(data.Dataset):
         """
         img_path = self.files[self.split][index].rstrip()
         lbl_path = os.path.join(self.annotations_base,
-                                img_path.split(os.sep)[-2], 
+                                img_path.split(os.sep)[-2],
                                 os.path.basename(img_path)[:-15] + 'gtFine_labelIds.png')
 
         img = m.imread(img_path)
@@ -96,7 +98,7 @@ class cityscapesLoader(data.Dataset):
 
         lbl = m.imread(lbl_path)
         lbl = self.encode_segmap(np.array(lbl, dtype=np.uint8))
-        
+
         if self.is_transform:
             img, lbl = self.transform(img, lbl)
 
@@ -157,12 +159,13 @@ class cityscapesLoader(data.Dataset):
             mask[mask==_validc] = self.class_map[_validc]
         return mask
 
+# Run it as a standalone file from project root directory
 if __name__ == '__main__':
     import torchvision
     import matplotlib.pyplot as plt
+    from ptsemseg.loader import get_loader, get_data_path
 
-    local_path = '/home/meetshah1995/datasets/cityscapes/'
-    dst = cityscapesLoader(local_path, is_transform=True)
+    dst = cityscapesLoader(get_data_path('cityscapes'), is_transform=True)
     trainloader = data.DataLoader(dst, batch_size=4, num_workers=0)
     for i, data in enumerate(trainloader):
         imgs, labels = data
@@ -172,7 +175,7 @@ if __name__ == '__main__':
         axarr[0].imshow(img)
         axarr[1].imshow(dst.decode_segmap(labels.numpy()[0]))
         plt.show()
-        a = raw_input()
+        a = input()
         if a == 'ex':
             break
         else:

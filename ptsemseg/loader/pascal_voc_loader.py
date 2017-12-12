@@ -123,7 +123,7 @@ class pascalVOCLoader(data.Dataset):
 
         sbd_train_list = tuple(open(sbd_path + 'dataset/train.txt', 'r'))
         sbd_train_list = [id_.rstrip() for id_ in sbd_train_list]
-        
+
         self.files['train_aug'] = self.files['train'] + sbd_train_list
 
         if pre_encode:
@@ -141,8 +141,10 @@ class pascalVOCLoader(data.Dataset):
                 m.imsave(target_path + i + '.png', lbl)
 
 if __name__ == '__main__':
-    local_path = '/home/gpu_users/meetshah/segdata/pascal/VOCdevkit/VOC2012'
-    dst = pascalVOCLoader(local_path, is_transform=True)
+    import sys
+    sys.path.append(".")
+    from ptsemseg.loader import get_loader, get_data_path
+    dst = pascalVOCLoader(get_data_path('pascal'), is_transform=True)
     trainloader = data.DataLoader(dst, batch_size=4)
     for i, data in enumerate(trainloader):
         imgs, labels = data
