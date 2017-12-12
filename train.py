@@ -16,7 +16,8 @@ from ptsemseg.loader import get_loader, get_data_path
 from ptsemseg.loss import cross_entropy2d
 from ptsemseg.metrics import scores
 
-def train(args):
+def main(args):
+    global vis
 
     # Setup Dataloader
     data_loader = get_loader(args.dataset)
@@ -27,13 +28,6 @@ def train(args):
 
     # Setup visdom for visualization
     vis = visdom.Visdom()
-
-    loss_window = vis.line(X=torch.zeros(1),
-                           Y=torch.zeros(1),
-                           opts=dict(xlabel='minibatches',
-                                     ylabel='Loss',
-                                     title='Training Loss',
-                                     legend=['Loss']))
 
     # Setup Model
     model = get_model(args.arch, n_classes)
@@ -52,43 +46,58 @@ def train(args):
                                 weight_decay=5e-4)
 
     for epoch in range(args.n_epoch):
-        for i, (images, labels) in enumerate(trainloader):
-            if torch.cuda.is_available():
-                images = Variable(images.cuda(0))
-                labels = Variable(labels.cuda(0))
-            else:
-                images = Variable(images)
-                labels = Variable(labels)
+        train(trainloader, model, cross_entropy2d, optimizer, epoch)
 
-            optimizer.zero_grad()
-            outputs = model(images)
-
-            loss = cross_entropy2d(outputs, labels)
-
-            loss.backward()
-            optimizer.step()
-
-            vis.line(
-                X=torch.ones(1) * i,
-                Y=torch.Tensor([loss.data[0]]),
-                win=loss_window,
-                update='append')
-
-            print("Epoch [%d/%d] Batch [%d/%d] Loss: %.4f" % (epoch+1, args.n_epoch, i, trainloader.dataset.__len__()/trainloader.batch_size, loss.data[0]))
-
+        # Visualize result
         test_output = model(test_image)
         predicted = loader.decode_segmap(test_output[0].cpu().data.numpy().argmax(0))
         target = loader.decode_segmap(test_segmap.numpy())
-
         vis.image(test_image[0].cpu().data.numpy(), opts=dict(title='Input' + str(epoch)))
         vis.image(np.transpose(target, [2,0,1]), opts=dict(title='GT' + str(epoch)))
         vis.image(np.transpose(predicted, [2,0,1]), opts=dict(title='Predicted' + str(epoch)))
 
+        # Save model
         if not os.path.exists(args.save_path):
             os.makedirs(args.save_path)
         torch.save(model, os.path.join(args.save_path, "{}_{}_{}_{}.pkl".format(args.arch,
                                                                                 args.dataset,
                                                                                 args.feature_scale, epoch)))
+
+def train(trainloader, model, criterion, optimizer, epoch):
+
+    # Initialize current epoch log
+    epoch_loss_window = vis.line(X=torch.zeros(1),
+                           Y=torch.zeros(1),
+                           opts=dict(xlabel='minibatches',
+                                     ylabel='Loss',
+                                     title='Single Epoch Training Loss',
+                                     legend=['Loss']))
+
+    for i, (images, labels) in enumerate(trainloader):
+        if torch.cuda.is_available():
+            images = Variable(images.cuda(0))
+            labels = Variable(labels.cuda(0))
+        else:
+            images = Variable(images)
+            labels = Variable(labels)
+
+        optimizer.zero_grad()
+        outputs = model(images)
+
+        loss = criterion(outputs, labels)
+
+        loss.backward()
+        optimizer.step()
+
+        vis.line(
+            X=torch.ones(1) * i,
+            Y=torch.Tensor([loss.data[0]]),
+            win=epoch_loss_window,
+            update='append')
+
+        print("Epoch [%d/%d] Batch [%d/%d] Loss: %.4f" % (epoch+1, args.n_epoch, i, trainloader.dataset.__len__()/trainloader.batch_size, loss.data[0]))
+
+    vis.close(win=epoch_loss_window)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
@@ -113,4 +122,4 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', nargs='?', type=str, default='.',
                         help='Location where checkpoints are saved')
     args = parser.parse_args()
-    train(args)
+    main(args)
