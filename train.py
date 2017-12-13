@@ -27,14 +27,14 @@ def main(args):
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
     loader = data_loader(data_path, is_transform=True, img_size=(args.img_rows, args.img_cols))
-    n_classes = loader.n_classes
+    args.n_classes = loader.n_classes
     trainloader = data.DataLoader(loader, batch_size=args.batch_size, num_workers=4, shuffle=True)
 
     # Setup visdom for visualization
     vis = visdom.Visdom()
 
     # Setup Model
-    model = get_model(args.arch, n_classes)
+    model = get_model(args.arch, args.n_classes)
 
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
@@ -73,7 +73,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
     eval_time = AverageMeter()
     losses = AverageMeter()
     multimeter = MultiAverageMeter(2)
-    metrics = Metrics(n_classes=20)
+    metrics = Metrics(n_classes=args.n_classes)
 
     # Initialize current epoch log
     epoch_loss_window = vis.line(X=torch.zeros(1),
