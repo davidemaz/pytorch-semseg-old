@@ -4,6 +4,11 @@
 import numpy as np
 
 class Metrics(object):
+        """ Compute metrics
+        This class can compute different metrics. Call only :func: `compute`
+        from outside the class because it compute and cache the confusion matrix
+        needed for computations
+        """
     def __init__(self, n_classes, class_weights=[]):
         """
         Args:
@@ -13,11 +18,12 @@ class Metrics(object):
         self.n_classes = n_classes
         self.metrics = {'pixel_acc' : _pixel_accuracy,
                         'mean_acc' : _mean_accuracy,
-                        'iou_class' : _iou_class}
+                        'iou_class' : _iou_class,
+                        'iiou_class' : _iiou_class}
         self.class_weights = class_weights
-        self.reset()
+        self._reset()
 
-    def reset(self):
+    def _reset(self):
         self.cm = np.zeros((self.n_classes, self.n_classes))
 
     def _confusion_matrix(self, gt, pred, background=False):
@@ -36,6 +42,14 @@ class Metrics(object):
                                                              self.n_classes)
 
     def compute(self, metric_name, gts, preds):
+        """ Compute metrics
+        This is the only public function of this class. Compute a single or
+        a set of metrics.
+        Args:
+            metric_name (string or list): the single metric or list to compute
+            gts (list of matrices): groundtruth
+            preds (list of matrices): predictions
+        """
         self.reset()
         for lt, lp in zip(gts, preds):
             self.cm += _confusion_matrix(lt.flatten(),
