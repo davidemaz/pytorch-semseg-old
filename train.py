@@ -70,6 +70,7 @@ def main(args):
 def train(trainloader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter()
     data_time = AverageMeter()
+    eval_time = AverageMeter()
     losses = AverageMeter()
     multimeter = MultiAverageMeter(2)
     metrics = Metrics(n_classes=20)
@@ -98,10 +99,12 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         outputs = model(images)
 
         #Compute metrics
+        start_eval_time = time.perf_counter()
         pred = outputs.data.max(1)[1].cpu().numpy()
         gt = labels.data.cpu().numpy()
         values = metrics.compute(args.metrics, gt, pred)
         multimeter.update(values, images.size(0))
+        eval_time.update(time.perf_counter() - start_eval_time)
 
         loss = criterion(outputs, labels)
         losses.update(loss.data[0], images.size(0))
@@ -122,11 +125,13 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
 
         batch_log_str = ('Epoch: [{}/{}][{}/{}] '
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
-                        'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                        'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
+                        'Data {eval_time.val:.3f} ({eval_time.avg:.3f})\t'
                         'Loss: {loss.val:.3f} ({loss.avg:.3f})'.format(
                            epoch+1, args.n_epoch, i,
                            math.floor(trainloader.dataset.__len__()/trainloader.batch_size),
-                           batch_time=batch_time, data_time=data_time, loss=losses))
+                           batch_time=batch_time, data_time=data_time,
+                           eval_time=eval_time, loss=losses))
         for i,m in enumerate(args.metrics):
             batch_log_str += ' {}: {:.3f} ({:.3f})'.format(m ,
                                                            multimeter.meters[i].val,
