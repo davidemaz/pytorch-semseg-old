@@ -49,8 +49,11 @@ def main(args):
                                 momentum=args.momentum,
                                 weight_decay=5e-4)
 
+    # Main training loop
     for epoch in range(args.n_epoch):
         train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
+
+        validate(valloader, model, cross_entropy2d, epoch, args)
 
         # Visualize result
         test_output = model(test_image)
@@ -72,7 +75,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
     data_time = AverageMeter()
     eval_time = AverageMeter()
     losses = AverageMeter()
-    multimeter = MultiAverageMeter(2)
+    multimeter = MultiAverageMeter(len(args.metrics))
     metrics = Metrics(n_classes=args.n_classes)
 
     # Initialize current epoch log
