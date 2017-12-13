@@ -2,35 +2,39 @@ import sys
 import torch
 import visdom
 import argparse
+import time
 import numpy as np
+import math
+
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision.models as models
 
 from torch.autograd import Variable
 from torch.utils import data
-from tqdm import tqdm
 
+from ptsemseg.loss import cross_entropy2d
 from ptsemseg.loader import get_loader, get_data_path
-from ptsemseg.metrics import scores
+from ptsemseg.metrics import AverageMeter
+from ptsemseg.metrics import MultiAverageMeter
+from ptsemseg.metrics import Metrics
 
-def validate(args):
-
-    # Setup Dataloader
-    data_loader = get_loader(args.dataset)
-    data_path = get_data_path(args.dataset)
-    loader = data_loader(data_path, split=args.split, is_transform=True, img_size=(args.img_rows, args.img_cols))
-    n_classes = loader.n_classes
-    valloader = data.DataLoader(loader, batch_size=args.batch_size, num_workers=4)
-
-    # Setup Model
-    model = torch.load(args.model_path)
+def validate(valloader, model, criterion, epoch, args):
+    batch_time = AverageMeter()
+    data_time = AverageMeter()
+    eval_time = AverageMeter()
+    losses = AverageMeter()
+    multimeter = MultiAverageMeter(len(args.metrics))
+    metrics = Metrics(n_classes=args.n_classes)
     model.eval()
     if torch.cuda.is_available() and not isinstance(model, nn.DataParallel):
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
 
     gts, preds = [], []
-    for i, (images, labels) in tqdm(enumerate(valloader)):
+    end = time.perf_counter()
+    for i, (images, labels) in enumerate(valloader):
+        # measure data loading time
+        data_time.update(time.perf_counter() - end)
         if torch.cuda.is_available():
             images = Variable(images.cuda(0))
             labels = Variable(labels.cuda(0))
@@ -39,20 +43,44 @@ def validate(args):
             labels = Variable(labels)
 
         outputs = model(images)
+        start_eval_time = time.perf_counter()
         pred = outputs.data.max(1)[1].cpu().numpy()
         gt = labels.data.cpu().numpy()
+        values = metrics.compute(args.metrics, gt, pred)
+        multimeter.update(values, images.size(0))
+        eval_time.update(time.perf_counter() - start_eval_time)
 
         for gt_, pred_ in zip(gt, pred):
             gts.append(gt_)
             preds.append(pred_)
 
-    score, class_iou = scores(gts, preds, n_classes=n_classes)
+        loss = criterion(outputs, labels)
+        losses.update(loss.data[0], images.size(0))
 
-    for k, v in score.items():
-        print(k, v)
+        #measure elapsed time
+        batch_time.update(time.perf_counter() - end)
+        end = time.perf_counter()
 
-    for i in range(n_classes):
-        print(i, class_iou[i])
+        batch_log_str = ('Val: [{}/{}][{}/{}] '
+                        'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+                        'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
+                        'Eval {eval_time.val:.3f} ({eval_time.avg:.3f})\t'
+                        'Loss: {loss.val:.3f} ({loss.avg:.3f})'.format(
+                           epoch+1, args.n_epoch, i,
+                           math.floor(valloader.dataset.__len__()/valloader.batch_size),
+                           batch_time=batch_time, data_time=data_time,
+                           eval_time=eval_time, loss=losses))
+        for i,m in enumerate(args.metrics):
+            batch_log_str += ' {}: {:.3f} ({:.3f})'.format(m ,
+                                                           multimeter.meters[i].val,
+                                                           multimeter.meters[i].avg)
+        print(batch_log_str)
+
+
+    globalValues = metrics.compute(args.metrics, gts, preds)
+    print('Global Metrics:')
+    for m,v in zip(args.metrics, globalValues):
+        print('{}: {}'.format(m, v))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
@@ -68,5 +96,20 @@ if __name__ == '__main__':
                         help='Batch Size')
     parser.add_argument('--split', nargs='?', type=str, default='val',
                         help='Split of dataset to test on')
+    parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
+                        help='Metrics to compute and show')
     args = parser.parse_args()
-    validate(args)
+    #Params preprocessing
+    args.metrics = args.metrics.split(',')
+    args.n_epoch = 1
+    # Setup Dataloader
+    data_loader = get_loader(args.dataset)
+    data_path = get_data_path(args.dataset)
+    loader = data_loader(data_path, split=args.split, is_transform=True, img_size=(args.img_rows, args.img_cols))
+    args.n_classes = loader.n_classes
+    valloader = data.DataLoader(loader, batch_size=args.batch_size, num_workers=4)
+
+    # Setup Model
+    model = torch.load(args.model_path)
+
+    validate(valloader, model, cross_entropy2d, 0, args)
