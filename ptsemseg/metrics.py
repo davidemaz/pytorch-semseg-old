@@ -51,7 +51,7 @@ class Metrics(object):
             preds (list of matrices): predictions
         """
         self._reset_cm()
-        if gts.ndim == 3:
+        if isinstance(gts,list) or gts.ndim == 3:
             for lt, lp in zip(gts, preds):
                 self.cm += self._confusion_matrix(lt.flatten(),
                                                   lp.flatten())
