@@ -16,8 +16,9 @@ from torch.utils import data
 from ptsemseg.models import get_model
 from ptsemseg.loader import get_loader, get_data_path
 from ptsemseg.loss import cross_entropy2d
-from ptsemseg.metrics import scores
-from ptsemseg.utils import AverageMeter
+from ptsemseg.metrics import AverageMeter
+from ptsemseg.metrics import MultiAverageMeter
+from ptsemseg.metrics import Metrics
 
 def main(args):
     global vis
@@ -49,7 +50,7 @@ def main(args):
                                 weight_decay=5e-4)
 
     for epoch in range(args.n_epoch):
-        train(trainloader, model, cross_entropy2d, optimizer, epoch)
+        train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
 
         # Visualize result
         test_output = model(test_image)
@@ -66,10 +67,12 @@ def main(args):
                                                                                 args.dataset,
                                                                                 args.feature_scale, epoch)))
 
-def train(trainloader, model, criterion, optimizer, epoch):
+def train(trainloader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
+    multimeter = MultiAverageMeter(2)
+    metrics = Metrics(n_classes=20)
 
     # Initialize current epoch log
     epoch_loss_window = vis.line(X=torch.zeros(1),
@@ -93,6 +96,13 @@ def train(trainloader, model, criterion, optimizer, epoch):
             labels = Variable(labels)
 
         outputs = model(images)
+
+        #Compute metrics
+        pred = outputs.data.max(1)[1].cpu().numpy()
+        gt = labels.data.cpu().numpy()
+        values = metrics.compute(args.metrics, gt, pred)
+        multimeter.update(values, images.size(0))
+
         loss = criterion(outputs, labels)
         losses.update(loss.data[0], images.size(0))
 
@@ -110,13 +120,18 @@ def train(trainloader, model, criterion, optimizer, epoch):
             win=epoch_loss_window,
             update='append')
 
-        print('Epoch: [{}/{}][{}/{}] '
-              'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
-              'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
-              'Loss: {loss.val:.3f} ({loss.avg:.3f})'.format(
-                epoch+1, args.n_epoch, i,
-                math.floor(trainloader.dataset.__len__()/trainloader.batch_size),
-                batch_time=batch_time, data_time=data_time, loss=losses))
+        batch_log_str = ('Epoch: [{}/{}][{}/{}] '
+                        'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
+                        'Data {data_time.val:.3f} ({data_time.avg:.3f})\t'
+                        'Loss: {loss.val:.3f} ({loss.avg:.3f})'.format(
+                           epoch+1, args.n_epoch, i,
+                           math.floor(trainloader.dataset.__len__()/trainloader.batch_size),
+                           batch_time=batch_time, data_time=data_time, loss=losses))
+        for i,m in enumerate(args.metrics):
+            batch_log_str += ' {}: {:.3f} ({:.3f})'.format(m ,
+                                                           multimeter.meters[i].val,
+                                                           multimeter.meters[i].avg)
+        print(batch_log_str)
 
     vis.close(win=epoch_loss_window)
 
@@ -142,5 +157,10 @@ if __name__ == '__main__':
                         help='Divider for # of features to use')
     parser.add_argument('--save_path', nargs='?', type=str, default='.',
                         help='Location where checkpoints are saved')
+    parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
+                        help='Metrics to compute and show')
     args = parser.parse_args()
+    #Params preprocessing
+    args.metrics = args.metrics.split(',')
+    # Call main function
     main(args)
