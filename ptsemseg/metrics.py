@@ -55,7 +55,10 @@ class Metrics(object):
             self.cm += _confusion_matrix(lt.flatten(),
                                          lp.flatten(),
                                          self.n_classes)
-        return self.metrics()
+        if isinstance(metric_name,list):
+            return [self.metrics(m) for m in metric_name]
+        else:
+            return self.metrics(metric_name)
 
     def _pixel_accuracy(self):
         """Pixel-wise accuracy
@@ -84,3 +87,22 @@ class Metrics(object):
         fn = cm.sum(axis=0) * self.class_weights
         iiou = tp / (fp + fn - tp)
         return np.nanmean(iiou)
+
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
