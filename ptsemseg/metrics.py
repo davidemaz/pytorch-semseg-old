@@ -47,8 +47,8 @@ class Metrics(object):
         a set of metrics.
         Args:
             metric_name (string or list): the single metric or list to compute
-            gts (list of matrices): groundtruth
-            preds (list of matrices): predictions
+            gts (list of matrices, 2D or 3D matrix): groundtruth
+            preds (list of matrices, 2D or 3D matrix): predictions
         """
         self._reset_cm()
         if isinstance(gts,list) or gts.ndim == 3:
