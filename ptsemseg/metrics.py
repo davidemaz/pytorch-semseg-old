@@ -4,11 +4,11 @@
 import numpy as np
 
 class Metrics(object):
-        """ Compute metrics
-        This class can compute different metrics. Call only :func: `compute`
-        from outside the class because it compute and cache the confusion matrix
-        needed for computations
-        """
+    """ Compute metrics
+    This class can compute different metrics. Call only :func: `compute`
+    from outside the class because it compute and cache the confusion matrix
+    needed for computations
+    """
     def __init__(self, n_classes, class_weights=[]):
         """
         Args:
@@ -16,14 +16,14 @@ class Metrics(object):
             usually measured on cityscapes dataset
         """
         self.n_classes = n_classes
-        self.metrics = {'pixel_acc' : _pixel_accuracy,
-                        'mean_acc' : _mean_accuracy,
-                        'iou_class' : _iou_class,
-                        'iiou_class' : _iiou_class}
+        self.metrics = {'pixel_acc' : self._pixel_accuracy,
+                        'mean_acc' : self._mean_accuracy,
+                        'iou_class' : self._iou_class,
+                        'iiou_class' : self._iiou_class}
         self.class_weights = class_weights
-        self._reset()
+        self._reset_cm()
 
-    def _reset(self):
+    def _reset_cm(self):
         self.cm = np.zeros((self.n_classes, self.n_classes))
 
     def _confusion_matrix(self, gt, pred, background=False):
@@ -36,7 +36,7 @@ class Metrics(object):
             mask = (gt >= 0) & (gt < self.n_classes)
         else:
             mask = (gt > 0) & (gt < self.n_classes)
-        self.cm = np.bincount(
+        return np.bincount(
             self.n_classes * gt[mask].astype(int) +
             pred[mask], minlength=self.n_classes**2).reshape(self.n_classes,
                                                              self.n_classes)
@@ -50,15 +50,19 @@ class Metrics(object):
             gts (list of matrices): groundtruth
             preds (list of matrices): predictions
         """
-        self.reset()
-        for lt, lp in zip(gts, preds):
-            self.cm += _confusion_matrix(lt.flatten(),
-                                         lp.flatten(),
-                                         self.n_classes)
+        self._reset_cm()
+        if gts.ndim == 3:
+            for lt, lp in zip(gts, preds):
+                self.cm += self._confusion_matrix(lt.flatten(),
+                                                  lp.flatten())
+        elif gts.ndim == 2:
+            self.cm = self._confusion_matrix(gts.flatten(),
+                                              pred.flatten())
+
         if isinstance(metric_name,list):
-            return [self.metrics(m) for m in metric_name]
+            return [self.metrics[m]() for m in metric_name]
         else:
-            return self.metrics(metric_name)
+            return self.metrics[metric_name]()
 
     def _pixel_accuracy(self):
         """Pixel-wise accuracy
@@ -75,16 +79,18 @@ class Metrics(object):
     def _iou_class(self):
         """Intersection over Union averaged on classes
         """
-        iou = np.diag(cm) / (cm.sum(axis=1) + cm.sum(axis=0) - np.diag(cm))
+        iou = np.diag(self.cm) / (self.cm.sum(axis=1) +
+                                  self.cm.sum(axis=0) -
+                                  np.diag(self.cm))
         return np.nanmean(iou)
 
     def _iiou_class(self):
         """Intersection over Union averaged on classes weighted by
            average instance size
         """
-        tp = np.diag(cm) * self.class_weights
-        fp = cm.sum(axis=1)
-        fn = cm.sum(axis=0) * self.class_weights
+        tp = np.diag(self.cm) * self.class_weights
+        fp = self.cm.sum(axis=1)
+        fn = self.cm.sum(axis=0) * self.class_weights
         iiou = tp / (fp + fn - tp)
         return np.nanmean(iiou)
 
@@ -113,7 +119,7 @@ class MultiAverageMeter(object):
     """ Wrapper for AverageMeter to handle multiple values at a time
     """
     def __init__(self, n_values):
-        self.meters = [AverageMeter() for _ in n_values]
+        self.meters = [AverageMeter() for _ in range(n_values)]
 
     def update(self, values, n=1):
         if len(values) != len(self.meters):
@@ -122,3 +128,15 @@ class MultiAverageMeter(object):
                                                      len(values)))
         for i,v in enumerate(values):
             self.meters[i].update(v,n)
+
+
+
+if __name__ == '__main__':
+    #This code is for debug purposes
+    metrics = Metrics(3)
+    pred = np.array([[1,2,1],[1,3,1]])
+    gt = np.array([[1,1,1],[2,1,3]])
+    values = metrics.compute(['pixel_acc','iou_class'], gt, pred)
+    print(list(zip(['pixel_acc','iou_class'],values)))
+    values = metrics.compute('iou_class', gt, pred)
+    print('iou_class',values)
