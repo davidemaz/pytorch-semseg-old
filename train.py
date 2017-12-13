@@ -126,7 +126,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         batch_log_str = ('Epoch: [{}/{}][{}/{}] '
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
                         'Data {data_time.val:.3f} ({data_time.avg:.3f}) '
-                        'Data {eval_time.val:.3f} ({eval_time.avg:.3f})\t'
+                        'Eval {eval_time.val:.3f} ({eval_time.avg:.3f})\t'
                         'Loss: {loss.val:.3f} ({loss.avg:.3f})'.format(
                            epoch+1, args.n_epoch, i,
                            math.floor(trainloader.dataset.__len__()/trainloader.batch_size),
