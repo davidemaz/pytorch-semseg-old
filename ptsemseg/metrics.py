@@ -106,3 +106,19 @@ class AverageMeter(object):
         self.sum += val * n
         self.count += n
         self.avg = self.sum / self.count
+
+
+
+class MultiAverageMeter(object):
+    """ Wrapper for AverageMeter to handle multiple values at a time
+    """
+    def __init__(self, n_values):
+        self.meters = [AverageMeter() for _ in n_values]
+
+    def update(self, values, n=1):
+        if len(values) != len(self.meters):
+            raise ValueError('Wrong number of values. Should be {}'
+                             ' instead is {}'.format(len(self.meters),
+                                                     len(values)))
+        for i,v in enumerate(values):
+            self.meters[i].update(v,n)
