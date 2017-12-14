@@ -71,19 +71,36 @@ def main(args):
                                 momentum=args.momentum,
                                 weight_decay=5e-4)
 
+    loss_viswindow = vis.line(X=torch.zeros((1, )).cpu(),
+                              Y=torch.zeros((1, 2)).cpu(),
+                              opts=dict(xlabel='Epochs',
+                                        ylabel='Loss',
+                                        title='Loss trough Epochs',
+                                        legend=['Train','Val']))
+
     # Main training loop
     for epoch in range(args.n_epoch):
-        train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
 
-        validate(valloader, model, cross_entropy2d, epoch, args)
+        trainloss = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
+        valloss = validate(valloader, model, cross_entropy2d, epoch, args)
+
+        # Track loss trough epochs
+        vis.line(
+            X=torch.ones((1,2)).cpu()*epoch,
+            Y=torch.Tensor([trainloss.avg, valloss.avg]).unsqueeze(0).cpu(),
+            win=loss_viswindow,
+            update='append')
 
         # Visualize result
         test_output = model(test_image)
         predicted = val_dataset.decode_segmap(test_output[0].cpu().data.numpy().argmax(0))
         target = val_dataset.decode_segmap(test_segmap.numpy())
-        vis.image(test_image[0].cpu().data.numpy(), opts=dict(title='Input' + str(epoch)))
-        vis.image(np.transpose(target, [2,0,1]), opts=dict(title='GT' + str(epoch)))
-        vis.image(np.transpose(predicted, [2,0,1]), opts=dict(title='Predicted' + str(epoch)))
+        visdomwin_testinput = vis.image(test_image[0].cpu().data.numpy(),
+                                        opts=dict(title='Input' + str(epoch)))
+        visdomwin_testtarget = vis.image(np.transpose(target, [2,0,1]),
+                                         opts=dict(title='GT' + str(epoch)))
+        visdomwin_testpredicted = vis.image(np.transpose(predicted, [2,0,1]),
+                                            opts=dict(title='Predicted' + str(epoch)))
 
         # Save model
         if not os.path.exists(args.save_path):
@@ -105,7 +122,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
                            Y=torch.zeros(1),
                            opts=dict(xlabel='minibatches',
                                      ylabel='Loss',
-                                     title='Single Epoch Training Loss',
+                                     title='Epoch {} Training Loss'.format(epoch),
                                      legend=['Loss']))
 
     model.train()
@@ -170,7 +187,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         batch_time.update(time.perf_counter() - end)
         end = time.perf_counter()
 
-    vis.close(win=epoch_loss_window)
+    return losses
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
