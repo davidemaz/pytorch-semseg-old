@@ -21,10 +21,15 @@ from ptsemseg.loss import cross_entropy2d
 from ptsemseg.metrics import AverageMeter
 from ptsemseg.metrics import MultiAverageMeter
 from ptsemseg.metrics import Metrics
+from ptsemseg.utils import save_checkpoint
 from validate import validate
 
+best_metric_value = 0
+# Setup visdom for visualization
+vis = visdom.Visdom()
+
 def main(args):
-    global vis
+    global best_metric_value
 
     # Setup Dataset and Dataloader
     data_loader = get_loader(args.dataset)
@@ -49,10 +54,6 @@ def main(args):
                              num_workers=args.num_workers,
                              shuffle=False,
                              pin_memory=True)
-
-
-    # Setup visdom for visualization
-    vis = visdom.Visdom()
 
     # Setup Model
     model = get_model(args.arch, args.n_classes)
@@ -79,6 +80,8 @@ def main(args):
                                         legend=['Train','Val']))
 
     # Open log file
+    if not os.path.exists(args.save_path):
+        os.makedirs(args.save_path)
     log_file = open(os.path.join(args.save_path, 'logs.txt'), 'w')
     log_header = 'epoch'
     log_header += ',train_loss'
@@ -123,12 +126,20 @@ def main(args):
         visdomwin_testpredicted = vis.image(np.transpose(predicted, [2,0,1]),
                                             opts=dict(title='Predicted' + str(epoch)))
 
-        # Save model
-        if not os.path.exists(args.save_path):
-            os.makedirs(args.save_path)
-        torch.save(model, os.path.join(args.save_path, "{}_{}_{}_{}.pkl".format(args.arch,
-                                                                                args.dataset,
-                                                                                args.feature_scale, epoch)))
+        # Take best and save model
+        curr_metric_value = valmetrics['metrics'].meters[0].avg
+        is_best = curr_metric_value > best_metric_value
+        best_metric_value = max(curr_metric_value, best_metric_value)
+        save_checkpoint({
+            'epoch': epoch + 1,
+            'args': args,
+            'state_dict': model.state_dict(),
+            'best_metric_value': best_metric_value,
+            'optimizer': optimizer.state_dict(),
+        }, is_best, os.path.join(args.save_path,
+                                 "{}_{}_{}.pkl".format(args.arch,
+                                                       args.dataset,
+                                                       epoch)))
 
     log_file.close()
 
@@ -235,7 +246,8 @@ if __name__ == '__main__':
     parser.add_argument('--save_path', nargs='?', type=str, default='.',
                         help='Location where checkpoints are saved')
     parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
-                        help='Metrics to compute and show')
+                        help='Metrics to compute and show, the first in the list '
+                             'is also used to evaluate the best model to save')
     parser.add_argument('--num_workers', nargs='?', type=int, default=4,
                         help='Number of processes to load and preprocess images')
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,

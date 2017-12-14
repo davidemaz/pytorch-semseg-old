@@ -3,6 +3,7 @@ Misc Utility functions
 '''
 
 import os
+import torch
 
 def recursive_glob(rootdir='.', suffix=''):
     """Performs recursive glob with given suffix and rootdir
@@ -34,3 +35,10 @@ def adjust_learning_rate(optimizer, init_lr, epoch):
     lr = init_lr * (0.1 ** (epoch // 30))
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
+
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    if not os.path.exists(filename):
+        os.makedirs(filename)
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
