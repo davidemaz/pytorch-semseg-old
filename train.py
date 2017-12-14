@@ -21,6 +21,7 @@ from ptsemseg.loss import cross_entropy2d
 from ptsemseg.metrics import AverageMeter
 from ptsemseg.metrics import MultiAverageMeter
 from ptsemseg.metrics import Metrics
+from validate import validate
 
 def main(args):
     global vis
@@ -28,6 +29,7 @@ def main(args):
     # Setup Dataset and Dataloader
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
+    # Train
     train_dataset = data_loader(data_path,
                          is_transform=True,
                          img_size=(args.img_rows, args.img_cols))
@@ -37,6 +39,17 @@ def main(args):
                                   num_workers=args.num_workers,
                                   shuffle=True,
                                   pin_memory=True)
+    # Validation
+    val_dataset = data_loader(data_path,
+                      split='val',
+                      is_transform=True,
+                      img_size=(args.img_rows, args.img_cols))
+    valloader = data.DataLoader(val_dataset,
+                             batch_size=args.batch_size,
+                             num_workers=args.num_workers,
+                             shuffle=False,
+                             pin_memory=True)
+
 
     # Setup visdom for visualization
     vis = visdom.Visdom()
@@ -66,8 +79,8 @@ def main(args):
 
         # Visualize result
         test_output = model(test_image)
-        predicted = loader.decode_segmap(test_output[0].cpu().data.numpy().argmax(0))
-        target = loader.decode_segmap(test_segmap.numpy())
+        predicted = val_dataset.decode_segmap(test_output[0].cpu().data.numpy().argmax(0))
+        target = val_dataset.decode_segmap(test_segmap.numpy())
         vis.image(test_image[0].cpu().data.numpy(), opts=dict(title='Input' + str(epoch)))
         vis.image(np.transpose(target, [2,0,1]), opts=dict(title='GT' + str(epoch)))
         vis.image(np.transpose(predicted, [2,0,1]), opts=dict(title='Predicted' + str(epoch)))
