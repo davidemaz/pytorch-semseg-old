@@ -57,7 +57,7 @@ class Metrics(object):
                                                   lp.flatten())
         elif gts.ndim == 2:
             self.cm = self._confusion_matrix(gts.flatten(),
-                                              pred.flatten())
+                                              preds.flatten())
 
         if isinstance(metric_name,list):
             return [self.metrics[m]() for m in metric_name]
