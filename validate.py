@@ -34,6 +34,9 @@ def validate(valloader, model, criterion, epoch, args):
     gts, preds = [], []
     end = time.perf_counter()
     for i, (images, labels) in enumerate(valloader):
+        if args.max_iters_per_epoch != 0:
+            if i > args.max_iters_per_epoch:
+                break
         # measure data loading time
         data_time.update(time.perf_counter() - end)
         if torch.cuda.is_available():
@@ -99,6 +102,9 @@ if __name__ == '__main__':
                         help='Split of dataset to test on')
     parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
                         help='Metrics to compute and show')
+    parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
+                        help='Max number of iterations per epoch.'
+                             ' Useful for debug purposes')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')

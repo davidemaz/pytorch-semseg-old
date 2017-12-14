@@ -99,6 +99,9 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
 
     end = time.perf_counter()
     for i, (images, labels) in enumerate(trainloader):
+        if args.max_iters_per_epoch != 0:
+            if i > args.max_iters_per_epoch:
+                break
         # measure data loading time
         data_time.update(time.perf_counter() - end)
         if torch.cuda.is_available():
@@ -129,11 +132,11 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         loss.backward()
         optimizer.step()
 
-        # vis.line(
-        #     X=torch.ones(1) * i,
-        #     Y=torch.Tensor([loss.data[0]]),
-        #     win=epoch_loss_window,
-        #     update='append')
+        vis.line(
+            X=torch.ones(1) * i,
+            Y=torch.Tensor([loss.data[0]]),
+            win=epoch_loss_window,
+            update='append')
 
         batch_log_str = ('Epoch: [{}/{}][{}/{}] '
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
@@ -182,6 +185,9 @@ if __name__ == '__main__':
                         help='Metrics to compute and show')
     parser.add_argument('--num_workers', nargs='?', type=int, default=4,
                         help='Number of processes to load and preprocess images')
+    parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
+                        help='Max number of iterations per epoch.'
+                             ' Useful for debug purposes')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
