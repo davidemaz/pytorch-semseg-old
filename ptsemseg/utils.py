@@ -3,6 +3,7 @@ Misc Utility functions
 '''
 
 import os
+import shutil
 import torch
 
 def recursive_glob(rootdir='.', suffix=''):
@@ -37,8 +38,8 @@ def adjust_learning_rate(optimizer, init_lr, epoch):
         param_group['lr'] = lr
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    if not os.path.exists(filename):
-        os.makedirs(filename)
+    if not os.path.exists(os.path.dirname(filename)):
+        os.makedirs(os.path.dirname(filename))
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
