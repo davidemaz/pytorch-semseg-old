@@ -3,6 +3,7 @@ import os.path
 import torch
 import visdom
 import argparse
+import random
 import time
 import math
 
@@ -107,18 +108,22 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
             images = Variable(images)
             labels = Variable(labels)
 
+        batch_size = images.size(0)
+
         outputs = model(images)
 
         #Compute metrics
         start_eval_time = time.perf_counter()
-        pred = outputs.data.max(1)[1].cpu().numpy()
-        gt = labels.data.cpu().numpy()
+        #sample to lighten evaluation
+        sample_idx = random.randint(0,batch_size-1)
+        pred = outputs.data[sample_idx,:,:,:].max(0)[1].cpu().numpy()
+        gt = labels.data[sample_idx,:,:].cpu().numpy()
         values = metrics.compute(args.metrics, gt, pred)
-        multimeter.update(values, images.size(0))
+        multimeter.update(values, batch_size)
         eval_time.update(time.perf_counter() - start_eval_time)
 
         loss = criterion(outputs, labels)
-        losses.update(loss.data[0], images.size(0))
+        losses.update(loss.data[0], batch_size)
 
         optimizer.zero_grad()
         loss.backward()
