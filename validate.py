@@ -85,7 +85,8 @@ def validate(valloader, model, criterion, epoch, args):
     print('Global Metrics:')
     for m,v in zip(args.metrics, globalValues):
         print('{}: {}'.format(m, v))
-    return losses
+
+    return dict(loss = losses, metrics = multimeter)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')

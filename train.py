@@ -78,16 +78,37 @@ def main(args):
                                         title='Loss trough Epochs',
                                         legend=['Train','Val']))
 
+    # Open log file
+    log_file = open(os.path.join(args.save_path, 'logs.txt'), 'w')
+    log_header = 'epoch'
+    log_header += ',train_loss'
+    for m in args.metrics:
+        log_header += ',train_' + m
+    log_header += ',val_loss'
+    for m in args.metrics:
+        log_header += ',val_' + m
+    log_file.write(log_header + '\n')
+
     # Main training loop
     for epoch in range(args.n_epoch):
 
-        trainloss = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
-        valloss = validate(valloader, model, cross_entropy2d, epoch, args)
+        trainmetrics = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
+        valmetrics = validate(valloader, model, cross_entropy2d, epoch, args)
+
+        # Write log file
+        log_line = '{}'.format(epoch)
+        log_line += ',{:.3f}'.format(trainmetrics['loss'].avg)
+        for m in trainmetrics['metrics'].meters:
+            log_line += ',{:.3f}'.format(m.avg)
+        log_line += ',{:.3f}'.format(valmetrics['loss'].avg)
+        for m in valmetrics['metrics'].meters:
+            log_line += ',{:.3f}'.format(m.avg)
+        log_file.write(log_line + '\n')
 
         # Track loss trough epochs
         vis.line(
             X=torch.ones((1,2)).cpu()*epoch,
-            Y=torch.Tensor([trainloss.avg, valloss.avg]).unsqueeze(0).cpu(),
+            Y=torch.Tensor([trainmetrics['loss'].avg, valmetrics['loss'].avg]).unsqueeze(0).cpu(),
             win=loss_viswindow,
             update='append')
 
@@ -108,6 +129,8 @@ def main(args):
         torch.save(model, os.path.join(args.save_path, "{}_{}_{}_{}.pkl".format(args.arch,
                                                                                 args.dataset,
                                                                                 args.feature_scale, epoch)))
+
+    log_file.close()
 
 def train(trainloader, model, criterion, optimizer, epoch, args):
     batch_time = AverageMeter()
@@ -187,7 +210,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         batch_time.update(time.perf_counter() - end)
         end = time.perf_counter()
 
-    return losses
+    return dict(loss = losses, metrics = multimeter)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
