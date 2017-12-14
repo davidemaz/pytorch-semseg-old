@@ -70,7 +70,7 @@ def main(args):
     optimizer = torch.optim.SGD(model.parameters(),
                                 lr=args.lr,
                                 momentum=args.momentum,
-                                weight_decay=5e-4)
+                                weight_decay=args.weight_decay)
 
     loss_viswindow = vis.line(X=torch.zeros((1, )).cpu(),
                               Y=torch.zeros((1, 2)).cpu(),
@@ -239,6 +239,8 @@ if __name__ == '__main__':
                         help='Batch Size')
     parser.add_argument('--lr', nargs='?', type=float, default=1e-5,
                         help='Learning Rate')
+    parser.add_argument('--weight_decay', nargs='?', type=float, default=5e-4,
+                        help='Weight Decay')
     parser.add_argument('--momentum', nargs='?', type=float, default=0.9,
                         help='Momentum')
     parser.add_argument('--feature_scale', nargs='?', type=int, default=1,
