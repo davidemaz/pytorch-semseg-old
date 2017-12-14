@@ -44,7 +44,7 @@ def main(args):
     model = get_model(args.arch, args.n_classes)
 
     if torch.cuda.is_available():
-        model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+        model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
         cudnn.benchmark = True
         test_image, test_segmap = train_dataset[0]
         test_image = Variable(test_image.unsqueeze(0).cuda(0))
@@ -124,10 +124,6 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         loss.backward()
         optimizer.step()
 
-        #measure elapsed time
-        batch_time.update(time.perf_counter() - end)
-        end = time.perf_counter()
-
         vis.line(
             X=torch.ones(1) * i,
             Y=torch.Tensor([loss.data[0]]),
@@ -148,6 +144,10 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
                                                            multimeter.meters[i].val,
                                                            multimeter.meters[i].avg)
         print(batch_log_str)
+
+        #measure elapsed time
+        batch_time.update(time.perf_counter() - end)
+        end = time.perf_counter()
 
     vis.close(win=epoch_loss_window)
 
