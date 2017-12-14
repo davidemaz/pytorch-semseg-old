@@ -23,12 +23,17 @@ from ptsemseg.metrics import Metrics
 def main(args):
     global vis
 
-    # Setup Dataloader
+    # Setup Dataset and Dataloader
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
-    loader = data_loader(data_path, is_transform=True, img_size=(args.img_rows, args.img_cols))
-    args.n_classes = loader.n_classes
-    trainloader = data.DataLoader(loader, batch_size=args.batch_size, num_workers=4, shuffle=True)
+    train_dataset = data_loader(data_path,
+                         is_transform=True,
+                         img_size=(args.img_rows, args.img_cols))
+    args.n_classes = train_dataset.n_classes
+    trainloader = data.DataLoader(train_dataset,
+                                  batch_size=args.batch_size,
+                                  num_workers=args.num_workers,
+                                  shuffle=True)
 
     # Setup visdom for visualization
     vis = visdom.Visdom()
@@ -38,10 +43,10 @@ def main(args):
 
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
-        test_image, test_segmap = loader[0]
+        test_image, test_segmap = train_dataset[0]
         test_image = Variable(test_image.unsqueeze(0).cuda(0))
     else:
-        test_image, test_segmap = loader[0]
+        test_image, test_segmap = train_dataset[0]
         test_image = Variable(test_image.unsqueeze(0))
 
     optimizer = torch.optim.SGD(model.parameters(),
@@ -167,6 +172,8 @@ if __name__ == '__main__':
                         help='Location where checkpoints are saved')
     parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
                         help='Metrics to compute and show')
+    parser.add_argument('--num_workers', nargs='?', type=int, default=4,
+                        help='Number of processes to load and preprocess images')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
