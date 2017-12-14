@@ -34,7 +34,8 @@ def main(args):
     trainloader = data.DataLoader(train_dataset,
                                   batch_size=args.batch_size,
                                   num_workers=args.num_workers,
-                                  shuffle=True)
+                                  shuffle=True,
+                                  pin_memory=True)
 
     # Setup visdom for visualization
     vis = visdom.Visdom()
@@ -100,8 +101,8 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         # measure data loading time
         data_time.update(time.perf_counter() - end)
         if torch.cuda.is_available():
-            images = Variable(images.cuda(0))
-            labels = Variable(labels.cuda(0))
+            images = Variable(images.cuda(0, async=True))
+            labels = Variable(labels.cuda(0, async=True))
         else:
             images = Variable(images)
             labels = Variable(labels)
