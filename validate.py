@@ -7,6 +7,7 @@ import numpy as np
 import math
 
 import torch.nn as nn
+import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 import torchvision.models as models
 
@@ -111,5 +112,6 @@ if __name__ == '__main__':
 
     # Setup Model
     model = torch.load(args.model_path)
+    cudnn.benchmark = True
 
     validate(valloader, model, cross_entropy2d, 0, args)

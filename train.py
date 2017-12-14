@@ -8,6 +8,7 @@ import math
 
 import numpy as np
 import torch.nn as nn
+import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
 import torchvision.models as models
 from torch.autograd import Variable
@@ -43,6 +44,7 @@ def main(args):
 
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
+        cudnn.benchmark = True
         test_image, test_segmap = train_dataset[0]
         test_image = Variable(test_image.unsqueeze(0).cuda(0))
     else:
