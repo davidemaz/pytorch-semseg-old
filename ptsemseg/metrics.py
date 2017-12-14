@@ -19,7 +19,8 @@ class Metrics(object):
         self.metrics = {'pixel_acc' : self._pixel_accuracy,
                         'mean_acc' : self._mean_accuracy,
                         'iou_class' : self._iou_class,
-                        'iiou_class' : self._iiou_class}
+                        'iiou_class' : self._iiou_class,
+                        'fwiou': self._fwiou}
         self.class_weights = class_weights
         self._reset_cm()
 
@@ -94,6 +95,12 @@ class Metrics(object):
         iiou = tp / (fp + fn - tp)
         return np.nanmean(iiou)
 
+    def _fwiou(self):
+        iou = np.diag(self.cm) / (self.cm.sum(axis=1) +
+                                  self.cm.sum(axis=0) -
+                                  np.diag(self.cm))
+        freq = self.cm.sum(axis=1) / self.cm.sum()
+        return (freq[freq > 0] * iou[freq > 0]).sum()
 
 
 class AverageMeter(object):
