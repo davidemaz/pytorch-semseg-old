@@ -129,11 +129,11 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         loss.backward()
         optimizer.step()
 
-        vis.line(
-            X=torch.ones(1) * i,
-            Y=torch.Tensor([loss.data[0]]),
-            win=epoch_loss_window,
-            update='append')
+        # vis.line(
+        #     X=torch.ones(1) * i,
+        #     Y=torch.Tensor([loss.data[0]]),
+        #     win=epoch_loss_window,
+        #     update='append')
 
         batch_log_str = ('Epoch: [{}/{}][{}/{}] '
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
@@ -144,10 +144,10 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
                            math.floor(trainloader.dataset.__len__()/trainloader.batch_size),
                            batch_time=batch_time, data_time=data_time,
                            eval_time=eval_time, loss=losses))
-        for i,m in enumerate(args.metrics):
-            batch_log_str += ' {}: {:.3f} ({:.3f})'.format(m ,
-                                                           multimeter.meters[i].val,
-                                                           multimeter.meters[i].avg)
+        for mi,mn in enumerate(args.metrics):
+            batch_log_str += ' {}: {:.3f} ({:.3f})'.format(mn ,
+                                                           multimeter.meters[mi].val,
+                                                           multimeter.meters[mi].avg)
         print(batch_log_str)
 
         #measure elapsed time
