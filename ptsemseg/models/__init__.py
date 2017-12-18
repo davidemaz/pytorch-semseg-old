@@ -35,7 +35,8 @@ def get_model(args):
                       psp_size=args.psp_size,
                       deep_features_size=args.deep_features_size,
                       backend=args.backend,
-                      pretrained=True)
+                      pretrained=True,
+                      auxiliary=args.auxiliary_loss)
     else:
         raise 'Model {} not available'.format(name)
 

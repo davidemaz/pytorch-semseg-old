@@ -179,11 +179,12 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
 
         batch_size = images.size(0)
 
+        # Forward pass
         outputs = model(images)
 
-        #Compute metrics
+        # Compute metrics
         start_eval_time = time.perf_counter()
-        #sample to lighten evaluation
+        # sample to lighten evaluation
         sample_idx = random.randint(0,batch_size-1)
         pred = outputs.data[sample_idx,:,:,:].max(0)[1].cpu().numpy()
         gt = labels.data[sample_idx,:,:].cpu().numpy()
@@ -232,6 +233,8 @@ if __name__ == '__main__':
     parser.add_argument('--backend', nargs='?', type=str, default='resnet18',
                         help='Backend to use (available only for pspnet)'
                         'available: squeezenet, densenet, resnet18,34,50,101,152')
+    parser.add_argument('--auxiliary_loss', action='store_true',
+                        help='Activate auxiliary loss for deeply supervised models')
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
                         help='Dataset to use [\'pascal, camvid, ade20k etc\']')
     parser.add_argument('--img_rows', nargs='?', type=int, default=256,
