@@ -56,7 +56,7 @@ def main(args):
                              pin_memory=True)
 
     # Setup Model
-    model = get_model(args.arch, args.n_classes)
+    model = get_model(args)
 
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
@@ -229,6 +229,9 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
     parser.add_argument('--arch', nargs='?', type=str, default='fcn8s',
                         help='Architecture to use [\'fcn8s, unet, segnet etc\']')
+    parser.add_argument('--backend', nargs='?', type=str, default='resnet18',
+                        help='Backend to use (available only for pspnet)'
+                        'available: squeezenet, densenet, resnet18,34,50,101,152')
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
                         help='Dataset to use [\'pascal, camvid, ade20k etc\']')
     parser.add_argument('--img_rows', nargs='?', type=int, default=256,
@@ -266,8 +269,25 @@ if __name__ == '__main__':
     parser.add_argument('--alpha_blend', action='store_true',
                         help='Blend input image with predicted mask when saving'
                         ' (only in validation)')
+
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
+
+    # For now settings for each backend are hardcoded
+    args.pspnet_sizes = (1,2,3,6)
+    if args.backend == 'squeezenet':
+        args.psp_size = 512
+        args.deep_features_size = 256
+    elif args.backend == 'densenet':
+        args.psp_size = 1024
+        args.deep_features_size = 512
+    elif args.backend == 'resnet18' or args.backend == 'resnet34':
+        args.psp_size = 512
+        args.deep_features_size = 256
+    elif args.backend == 'resnet50' or args.backend == 'resnet101' or args.backend == 'resnet152':
+        args.psp_size = 2048
+        args.deep_features_size = 1024
+
     # Call main function
     main(args)

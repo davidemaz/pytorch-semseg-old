@@ -8,7 +8,9 @@ from ptsemseg.models.linknet import *
 
 
 
-def get_model(name, n_classes):
+def get_model(args):
+    name = args.arch
+    n_classes = args.n_classes
     model = _get_model_instance(name)
 
     if name in ['fcn32s', 'fcn16s', 'fcn8s']:
@@ -27,6 +29,13 @@ def get_model(name, n_classes):
                       is_batchnorm=True,
                       in_channels=3,
                       is_deconv=True)
+    elif name == 'pspnet':
+        model = model(n_classes=n_classes,
+                      sizes=args.pspnet_sizes,
+                      psp_size=args.psp_size,
+                      deep_features_size=args.deep_features_size,
+                      backend=args.backend,
+                      pretrained=True)
     else:
         raise 'Model {} not available'.format(name)
 
@@ -39,6 +48,6 @@ def _get_model_instance(name):
         'fcn16s': fcn16s,
         'unet': unet,
         'segnet': segnet,
-        'pspnet': pspnet,
+        'pspnet': PSPNet,
         'linknet': linknet,
     }[name]
