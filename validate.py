@@ -5,7 +5,10 @@ import argparse
 import time
 import numpy as np
 import math
+import os
+import os.path
 
+import scipy.misc as misc
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
 import torch.nn.functional as F
@@ -20,6 +23,8 @@ from ptsemseg.loader import get_loader, get_data_path
 from ptsemseg.metrics import AverageMeter
 from ptsemseg.metrics import MultiAverageMeter
 from ptsemseg.metrics import Metrics
+
+ALPHA = 0.5
 
 def validate(valloader, model, criterion, epoch, args):
     batch_time = AverageMeter()
@@ -56,9 +61,24 @@ def validate(valloader, model, criterion, epoch, args):
         multimeter.update(values, images.size(0))
         eval_time.update(time.perf_counter() - start_eval_time)
 
-        for gt_, pred_ in zip(gt, pred):
+        for ii, (gt_, pred_) in enumerate(zip(gt, pred)):
             gts.append(gt_)
             preds.append(pred_)
+            # Save Segmentation Masks
+            if len(args.segmentation_maps_path) > 0:
+                decoded = loader.decode_segmap(pred_)
+                img_idx = i*images.size(0)+ii
+                img_name = valloader.dataset.files[args.split][img_idx]
+                if args.alpha_blend:
+                    orig_img = misc.imread(os.path.join(valloader.dataset.img_path,
+                                            img_name + '.jpg'))
+                    orig_img = misc.imresize(orig_img, (loader.img_size[0],
+                                                        loader.img_size[1]))
+                    out_img = ALPHA * orig_img + (1 - ALPHA) * decoded
+                else:
+                    out_img = decoded
+                misc.imsave(os.path.join(args.segmentation_maps_path, img_name + '.png'),
+                            out_img)
 
         loss = criterion(outputs, labels)
         losses.update(loss.data[0], images.size(0))
@@ -81,7 +101,6 @@ def validate(valloader, model, criterion, epoch, args):
                                                            multimeter.meters[i].val,
                                                            multimeter.meters[i].avg)
         print(batch_log_str)
-
 
     globalValues = metrics.compute(args.metrics, gts, preds)
     print('Global Metrics:')
@@ -113,9 +132,13 @@ if __name__ == '__main__':
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
                         help='Max number of iterations per epoch.'
                              ' Useful for debug purposes')
-    parser.add_argument('--include_background', nargs='?', type=bool,
-                        default=True, help='Include background as a separate'
-                             'class in evaluation metrics')
+    parser.add_argument('--include_background', action='store_true',
+                        help='Include background as a separate class in evaluation metrics')
+    parser.add_argument('--segmentation_maps_path', nargs='?', type=str,
+                        default='', help='Directory to save segmentation maps'
+                        ' leave it blank to disable saving')
+    parser.add_argument('--alpha_blend', action='store_true',
+                        help='Blend input image with predicted mask')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
@@ -135,5 +158,9 @@ if __name__ == '__main__':
     model.load_state_dict(torch.load(args.model_path)['state_dict'])
     model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
     cudnn.benchmark = True
+
+    if len(args.segmentation_maps_path) > 0:
+        if not os.path.exists(args.segmentation_maps_path):
+            os.makedirs(args.segmentation_maps_path)
 
     validate(valloader, model, cross_entropy2d, 0, args)

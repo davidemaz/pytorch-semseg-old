@@ -96,6 +96,7 @@ def main(args):
     for epoch in range(args.n_epoch):
 
         trainmetrics = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
+        args.split='val'
         valmetrics = validate(valloader, model, cross_entropy2d, epoch, args)
 
         # Write log file
@@ -259,6 +260,12 @@ if __name__ == '__main__':
     parser.add_argument('--include_background', nargs='?', type=bool,
                         default=True, help='Include background as a separate'
                              'class in evaluation metrics')
+    parser.add_argument('--segmentation_maps_path', nargs='?', type=str,
+                        default='', help='Directory to save segmentation maps'
+                        'when validating. Leave it blank to disable saving')
+    parser.add_argument('--alpha_blend', action='store_true',
+                        help='Blend input image with predicted mask when saving'
+                        ' (only in validation)')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
