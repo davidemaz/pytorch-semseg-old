@@ -15,6 +15,7 @@ from torch.autograd import Variable
 from torch.utils import data
 
 from ptsemseg.loss import cross_entropy2d
+from ptsemseg.models import get_model
 from ptsemseg.loader import get_loader, get_data_path
 from ptsemseg.metrics import AverageMeter
 from ptsemseg.metrics import MultiAverageMeter
@@ -26,7 +27,8 @@ def validate(valloader, model, criterion, epoch, args):
     eval_time = AverageMeter()
     losses = AverageMeter()
     multimeter = MultiAverageMeter(len(args.metrics))
-    metrics = Metrics(n_classes=args.n_classes)
+    metrics = Metrics(n_classes=args.n_classes,
+                      background=args.include_background)
     model.eval()
     if torch.cuda.is_available() and not isinstance(model, nn.DataParallel):
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
@@ -90,6 +92,8 @@ def validate(valloader, model, criterion, epoch, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
+    parser.add_argument('--arch', nargs='?', type=str, default='fcn8s',
+                        help='Architecture to use [\'fcn8s, unet, segnet etc\']')
     parser.add_argument('--model_path', nargs='?', type=str, default='fcn8s_pascal_1_26.pkl',
                         help='Path to the saved model')
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
@@ -109,6 +113,9 @@ if __name__ == '__main__':
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
                         help='Max number of iterations per epoch.'
                              ' Useful for debug purposes')
+    parser.add_argument('--include_background', nargs='?', type=bool,
+                        default=True, help='Include background as a separate'
+                             'class in evaluation metrics')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
@@ -124,7 +131,9 @@ if __name__ == '__main__':
                                         num_workers=args.num_workers)
 
     # Setup Model
-    model = torch.load(args.model_path)
+    model = get_model(args.arch, args.n_classes)
+    model.load_state_dict(torch.load(args.model_path)['state_dict'])
+    model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
     cudnn.benchmark = True
 
     validate(valloader, model, cross_entropy2d, 0, args)

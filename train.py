@@ -149,7 +149,8 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
     eval_time = AverageMeter()
     losses = AverageMeter()
     multimeter = MultiAverageMeter(len(args.metrics))
-    metrics = Metrics(n_classes=args.n_classes)
+    metrics = Metrics(n_classes=args.n_classes,
+                      background=args.include_background)
 
     # Initialize current epoch log
     epoch_loss_window = vis.line(X=torch.zeros(1),
@@ -255,6 +256,9 @@ if __name__ == '__main__':
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
                         help='Max number of iterations per epoch.'
                              ' Useful for debug purposes')
+    parser.add_argument('--include_background', nargs='?', type=bool,
+                        default=True, help='Include background as a separate'
+                             'class in evaluation metrics')
     args = parser.parse_args()
     #Params preprocessing
     args.metrics = args.metrics.split(',')
