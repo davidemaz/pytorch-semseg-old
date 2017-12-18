@@ -9,11 +9,13 @@ class Metrics(object):
     from outside the class because it compute and cache the confusion matrix
     needed for computations
     """
-    def __init__(self, n_classes, class_weights=[]):
+    def __init__(self, n_classes, background=True, class_weights=[]):
         """
         Args:
             class_weights (list): they are used to compute iiou metric
             usually measured on cityscapes dataset
+            background (bool): whether to include or not background or void (0)
+            class when computing metrics. Default: False
         """
         self.n_classes = n_classes
         self.metrics = {'pixel_acc' : self._pixel_accuracy,
@@ -21,19 +23,15 @@ class Metrics(object):
                         'iou_class' : self._iou_class,
                         'iiou_class' : self._iiou_class,
                         'fwiou': self._fwiou}
+        self.background = background
         self.class_weights = class_weights
         self._reset_cm()
 
     def _reset_cm(self):
         self.cm = np.zeros((self.n_classes, self.n_classes))
 
-    def _confusion_matrix(self, gt, pred, background=False):
-        """ Compute confusion matrix
-        Args:
-            background (bool): whether to include or not background or void (0)
-                class when computing metrics. Default: False
-        """
-        if background:
+    def _confusion_matrix(self, gt, pred):
+        if self.background:
             mask = (gt >= 0) & (gt < self.n_classes)
         else:
             mask = (gt > 0) & (gt < self.n_classes)
