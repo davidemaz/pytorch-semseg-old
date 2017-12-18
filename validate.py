@@ -47,11 +47,11 @@ def validate(valloader, model, criterion, epoch, args):
         # measure data loading time
         data_time.update(time.perf_counter() - end)
         if torch.cuda.is_available():
-            images = Variable(images.cuda(0))
-            labels = Variable(labels.cuda(0))
+            images = Variable(images.cuda(), volatile=True)
+            labels = Variable(labels.cuda(async=True), volatile=True)
         else:
-            images = Variable(images)
-            labels = Variable(labels)
+            images = Variable(images, volatile=True)
+            labels = Variable(labels, volatile=True)
 
         outputs = model(images)
         start_eval_time = time.perf_counter()
@@ -154,7 +154,7 @@ if __name__ == '__main__':
                                         num_workers=args.num_workers)
 
     # Setup Model
-    model = get_model(args.arch, args.n_classes)
+    model = get_model(args)
     model.load_state_dict(torch.load(args.model_path)['state_dict'])
     model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
     cudnn.benchmark = True
