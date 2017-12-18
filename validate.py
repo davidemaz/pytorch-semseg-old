@@ -104,6 +104,8 @@ if __name__ == '__main__':
                         help='Split of dataset to test on')
     parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
                         help='Metrics to compute and show')
+    parser.add_argument('--num_workers', nargs='?', type=int, default=4,
+                        help='Number of processes to load and preprocess images')
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
                         help='Max number of iterations per epoch.'
                              ' Useful for debug purposes')
@@ -114,9 +116,12 @@ if __name__ == '__main__':
     # Setup Dataloader
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
-    loader = data_loader(data_path, split=args.split, is_transform=True, img_size=(args.img_rows, args.img_cols))
+    loader = data_loader(data_path, split=args.split,
+                                    is_transform=True,
+                                    img_size=(args.img_rows, args.img_cols))
     args.n_classes = loader.n_classes
-    valloader = data.DataLoader(loader, batch_size=args.batch_size, num_workers=4)
+    valloader = data.DataLoader(loader, batch_size=args.batch_size,
+                                        num_workers=args.num_workers)
 
     # Setup Model
     model = torch.load(args.model_path)
