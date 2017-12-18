@@ -137,7 +137,7 @@ def main(args):
             'best_metric_value': best_metric_value,
             'optimizer': optimizer.state_dict(),
         }, is_best, os.path.join(args.save_path,
-                                 "{}_{}_{}.pkl".format(args.arch,
+                                 "{}_{}_{}.pth".format(args.arch,
                                                        args.dataset,
                                                        epoch)))
 
