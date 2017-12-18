@@ -133,7 +133,7 @@ def main(args):
         save_checkpoint({
             'epoch': epoch + 1,
             'args': args,
-            'state_dict': model.state_dict(),
+            'state_dict': model.module.state_dict(),
             'best_metric_value': best_metric_value,
             'optimizer': optimizer.state_dict(),
         }, is_best, os.path.join(args.save_path,
