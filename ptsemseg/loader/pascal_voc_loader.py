@@ -1,4 +1,5 @@
 import os
+import os.path
 import collections
 import json
 import torch
@@ -19,6 +20,8 @@ def get_data_path(name):
 class pascalVOCLoader(data.Dataset):
     def __init__(self, root, split="train_aug", is_transform=False, img_size=512):
         self.root = root
+        self.img_path = os.path.join(root, 'JPEGImages')
+        self.lbl_path = os.path.join(root, 'SegmentationClass', 'pre_encoded')
         self.split = split
         self.is_transform = is_transform
         self.n_classes = 21
@@ -31,7 +34,7 @@ class pascalVOCLoader(data.Dataset):
             file_list = [id_.rstrip() for id_ in file_list]
             self.files[split] = file_list
 
-        if not os.path.isdir(self.root + '/SegmentationClass/pre_encoded'):
+        if not os.path.isdir(os.path.join(self.root, 'SegmentationClass', 'pre_encoded')):
             self.setup(pre_encode=True)
         else:
             self.setup(pre_encode=False)
@@ -41,8 +44,8 @@ class pascalVOCLoader(data.Dataset):
 
     def __getitem__(self, index):
         img_name = self.files[self.split][index]
-        img_path = self.root + '/JPEGImages/' + img_name + '.jpg'
-        lbl_path = self.root + '/SegmentationClass/pre_encoded/' + img_name + '.png'
+        img_path = os.path.join(self.img_path, img_name + '.jpg')
+        lbl_path = os.path.join(self.lbl_path, img_name + '.png')
 
         img = m.imread(img_path)
         img = np.array(img, dtype=np.uint8)
