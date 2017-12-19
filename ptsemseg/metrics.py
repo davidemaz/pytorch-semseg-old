@@ -31,6 +31,11 @@ class Metrics(object):
         self.cm = np.zeros((self.n_classes, self.n_classes))
 
     def _confusion_matrix(self, gt, pred):
+        """ Compute confusion matrix
+        Used to compute all the metrics.
+        rows (first dimension): GT
+        cols (second dimension): Prediction
+        """
         if self.exclude_background:
             mask = (gt > 0) & (gt < self.n_classes)
         else:
@@ -77,10 +82,15 @@ class Metrics(object):
 
     def _iou_class(self):
         """Intersection over Union averaged on classes
+            Formula: TP / FP + FN + TP
+        Literally from code below:
+        TP / (FP+TP) + (FN+TP) - TP
         """
         iou = np.diag(self.cm) / (self.cm.sum(axis=1) +
                                   self.cm.sum(axis=0) -
                                   np.diag(self.cm))
+        # If no TP, FP nor FN are present it happens a 0 by 0 division.
+        # handle the resulting nans
         return np.nanmean(iou)
 
     def _iiou_class(self):
@@ -139,8 +149,8 @@ class MultiAverageMeter(object):
 if __name__ == '__main__':
     #This code is for debug purposes
     metrics = Metrics(3)
-    pred = np.array([[1,2,1],[1,3,1]])
-    gt = np.array([[1,1,1],[2,1,3]])
+    pred = np.array([[0,1,0],[1,2,0]])
+    gt = np.array([[0,0,0],[1,0,2]])
     values = metrics.compute(['pixel_acc','iou_class'], gt, pred)
     print(list(zip(['pixel_acc','iou_class'],values)))
     values = metrics.compute('iou_class', gt, pred)
