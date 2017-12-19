@@ -33,7 +33,7 @@ def validate(valloader, model, criterion, epoch, args):
     losses = AverageMeter()
     multimeter = MultiAverageMeter(len(args.metrics))
     metrics = Metrics(n_classes=args.n_classes,
-                      background=args.include_background)
+                      background=args.exclude_background)
     model.eval()
     if torch.cuda.is_available() and not isinstance(model, nn.DataParallel):
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
@@ -113,6 +113,11 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
     parser.add_argument('--arch', nargs='?', type=str, default='fcn8s',
                         help='Architecture to use [\'fcn8s, unet, segnet etc\']')
+    parser.add_argument('--backend', nargs='?', type=str, default='resnet18',
+                        help='Backend to use (available only for pspnet)'
+                        'available: squeezenet, densenet, resnet18,34,50,101,152')
+    parser.add_argument('--auxiliary_loss', action='store_true',
+                        help='Activate auxiliary loss for deeply supervised models')
     parser.add_argument('--model_path', nargs='?', type=str, default='fcn8s_pascal_1_26.pkl',
                         help='Path to the saved model')
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
@@ -132,8 +137,9 @@ if __name__ == '__main__':
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
                         help='Max number of iterations per epoch.'
                              ' Useful for debug purposes')
-    parser.add_argument('--include_background', action='store_true',
-                        help='Include background as a separate class in evaluation metrics')
+    parser.add_argument('--exclude_background', nargs='?', type=bool,
+                        default=True, help='Exclude background class'
+                             ' when evaluating')
     parser.add_argument('--segmentation_maps_path', nargs='?', type=str,
                         default='', help='Directory to save segmentation maps'
                         ' leave it blank to disable saving')
@@ -143,6 +149,21 @@ if __name__ == '__main__':
     #Params preprocessing
     args.metrics = args.metrics.split(',')
     args.n_epoch = 1
+    # For now settings for each backend are hardcoded
+    args.pspnet_sizes = (1,2,3,6)
+    if args.backend == 'squeezenet':
+        args.psp_size = 512
+        args.deep_features_size = 256
+    elif args.backend == 'densenet':
+        args.psp_size = 1024
+        args.deep_features_size = 512
+    elif args.backend == 'resnet18' or args.backend == 'resnet34':
+        args.psp_size = 512
+        args.deep_features_size = 256
+    elif args.backend == 'resnet50' or args.backend == 'resnet101' or args.backend == 'resnet152':
+        args.psp_size = 2048
+        args.deep_features_size = 1024
+
     # Setup Dataloader
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)

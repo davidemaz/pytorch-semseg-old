@@ -9,12 +9,12 @@ class Metrics(object):
     from outside the class because it compute and cache the confusion matrix
     needed for computations
     """
-    def __init__(self, n_classes, background=True, class_weights=[]):
+    def __init__(self, n_classes, exclude_background=False, class_weights=[]):
         """
         Args:
             class_weights (list): they are used to compute iiou metric
             usually measured on cityscapes dataset
-            background (bool): whether to include or not background or void (0)
+            exclude_background (bool): whether to include or not background
             class when computing metrics. Default: False
         """
         self.n_classes = n_classes
@@ -23,7 +23,7 @@ class Metrics(object):
                         'iou_class' : self._iou_class,
                         'iiou_class' : self._iiou_class,
                         'fwiou': self._fwiou}
-        self.background = background
+        self.exclude_background = exclude_background
         self.class_weights = class_weights
         self._reset_cm()
 
@@ -31,10 +31,10 @@ class Metrics(object):
         self.cm = np.zeros((self.n_classes, self.n_classes))
 
     def _confusion_matrix(self, gt, pred):
-        if self.background:
-            mask = (gt >= 0) & (gt < self.n_classes)
-        else:
+        if self.exclude_background:
             mask = (gt > 0) & (gt < self.n_classes)
+        else:
+            mask = (gt >= 0) & (gt < self.n_classes)
         return np.bincount(
             self.n_classes * gt[mask].astype(int) +
             pred[mask], minlength=self.n_classes**2).reshape(self.n_classes,
