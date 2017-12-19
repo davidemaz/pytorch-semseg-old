@@ -33,7 +33,7 @@ def validate(valloader, model, criterion, epoch, args):
     losses = AverageMeter()
     multimeter = MultiAverageMeter(len(args.metrics))
     metrics = Metrics(n_classes=args.n_classes,
-                      background=args.exclude_background)
+                      exclude_background=args.exclude_background)
     model.eval()
     if torch.cuda.is_available() and not isinstance(model, nn.DataParallel):
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count()))
@@ -137,9 +137,8 @@ if __name__ == '__main__':
     parser.add_argument('--max_iters_per_epoch', nargs='?', type=int, default=0,
                         help='Max number of iterations per epoch.'
                              ' Useful for debug purposes')
-    parser.add_argument('--exclude_background', nargs='?', type=bool,
-                        default=True, help='Exclude background class'
-                             ' when evaluating')
+    parser.add_argument('--exclude_background', action='store_true',
+                        help='Exclude background class when evaluating')
     parser.add_argument('--segmentation_maps_path', nargs='?', type=str,
                         default='', help='Directory to save segmentation maps'
                         ' leave it blank to disable saving')
