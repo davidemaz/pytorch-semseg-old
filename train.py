@@ -14,6 +14,7 @@ import torch.nn.functional as F
 import torchvision.models as models
 from torch.autograd import Variable
 from torch.utils import data
+from torch.optim.lr_scheduler import MultiStepLR
 
 from ptsemseg.models import get_model
 from ptsemseg.loader import get_loader, get_data_path
@@ -71,6 +72,7 @@ def main(args):
                                 lr=args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
+    scheduler = MultiStepLR(optimizer, milestones=[int(x) for x in args.milestones.split(',')])
 
     loss_viswindow = vis.line(X=torch.zeros((1, )).cpu(),
                               Y=torch.zeros((1, 2)).cpu(),
@@ -98,6 +100,7 @@ def main(args):
         trainmetrics = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
         args.split='val'
         valmetrics = validate(valloader, model, cross_entropy2d, epoch, args)
+        scheduler.step()
 
         # Write log file
         log_line = '{}'.format(epoch)
@@ -249,6 +252,8 @@ if __name__ == '__main__':
                         help='Learning Rate')
     parser.add_argument('--weight_decay', nargs='?', type=float, default=5e-4,
                         help='Weight Decay')
+    parser.add_argument('--milestones', nargs='?', type=str, default='10,20,30',
+                        help='Milestones for LR decreasing')
     parser.add_argument('--momentum', nargs='?', type=float, default=0.9,
                         help='Momentum')
     parser.add_argument('--feature_scale', nargs='?', type=int, default=1,
