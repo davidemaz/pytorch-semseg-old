@@ -124,18 +124,27 @@ class pascalVOCLoader(data.Dataset):
         if not os.path.exists(target_path):
             os.makedirs(target_path)
 
+        # Load SBD train set
         sbd_train_list = tuple(open(sbd_path + 'dataset/train.txt', 'r'))
         sbd_train_list = [id_.rstrip() for id_ in sbd_train_list]
-
-        self.files['train_aug'] = self.files['train'] + sbd_train_list
+        # Load SBD val set
+        sbd_val_list = tuple(open(sbd_path + 'dataset/val.txt', 'r'))
+        sbd_val_list = [id_.rstrip() for id_ in sbd_val_list]
+        # Join everything
+        self.files['train_aug'] = self.files['train'] + sbd_train_list + sbd_val_list
+        # Remove duplicates and intersection with Pascal VOC validation set
+        self.files['train_aug'] = list(set(self.files['train_aug']) - set(self.files['val']))
+        self.files['train_aug'].sort()
 
         if pre_encode:
             print("Pre-encoding segmentation masks...")
-            for i in tqdm(sbd_train_list):
-                lbl_path = sbd_path + 'dataset/cls/' + i + '.mat'
+            lbl_dir = os.path.join(sbd_path, 'dataset', 'cls')
+            lbl_list = [f for f in os.listdir(lbl_dir) if f.endswith('.mat')]
+            for i in tqdm(lbl_list):
+                lbl_path = os.path.join(lbl_dir, i)
                 lbl = io.loadmat(lbl_path)['GTcls'][0]['Segmentation'][0].astype(np.int32)
                 lbl = m.toimage(lbl, high=lbl.max(), low=lbl.min())
-                m.imsave(target_path + i + '.png', lbl)
+                m.imsave(target_path + os.path.splitext(i)[0] + '.png', lbl)
 
             for i in tqdm(self.files['trainval']):
                 lbl_path = self.root + '/SegmentationClass/' + i + '.png'
