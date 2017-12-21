@@ -72,7 +72,8 @@ def main(args):
                                 lr=args.lr,
                                 momentum=args.momentum,
                                 weight_decay=args.weight_decay)
-    scheduler = MultiStepLR(optimizer, milestones=[int(x) for x in args.milestones.split(',')])
+    if args.lr_policy == "MultiStepLR":
+        scheduler = MultiStepLR(optimizer, milestones=[int(x) for x in args.milestones.split(',')])
 
     loss_viswindow = vis.line(X=torch.zeros((1, )).cpu(),
                               Y=torch.zeros((1, 2)).cpu(),
@@ -100,7 +101,8 @@ def main(args):
         trainmetrics = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
         args.split='val'
         valmetrics = validate(valloader, model, cross_entropy2d, epoch, args)
-        scheduler.step()
+        if args.lr_policy == "MultiStepLR":
+            scheduler.step()
 
         # Write log file
         log_line = '{}'.format(epoch)
@@ -231,6 +233,8 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Hyperparams')
+
+    # Architecture -------------------------------------------------------------
     parser.add_argument('--arch', nargs='?', type=str, default='fcn8s',
                         help='Architecture to use [\'fcn8s, unet, segnet etc\']')
     parser.add_argument('--backend', nargs='?', type=str, default='resnet18',
@@ -238,26 +242,34 @@ if __name__ == '__main__':
                         'available: squeezenet, densenet, resnet18,34,50,101,152')
     parser.add_argument('--auxiliary_loss', action='store_true',
                         help='Activate auxiliary loss for deeply supervised models')
+
+    # Data ---------------------------------------------------------------------
     parser.add_argument('--dataset', nargs='?', type=str, default='pascal',
                         help='Dataset to use [\'pascal, camvid, ade20k etc\']')
     parser.add_argument('--img_rows', nargs='?', type=int, default=256,
                         help='Height of the input image')
     parser.add_argument('--img_cols', nargs='?', type=int, default=256,
                         help='Height of the input image')
+
+    # Learning hyperparams -----------------------------------------------------
     parser.add_argument('--n_epoch', nargs='?', type=int, default=100,
                         help='# of the epochs')
     parser.add_argument('--batch_size', nargs='?', type=int, default=1,
                         help='Batch Size')
     parser.add_argument('--lr', nargs='?', type=float, default=1e-5,
                         help='Learning Rate')
+    parser.add_argument('--lr_policy', nargs='?', type=str, default='PolyLR',
+                        help='Adopted learning rate policy: MultiStepLR or PolyLR')
     parser.add_argument('--weight_decay', nargs='?', type=float, default=5e-4,
                         help='Weight Decay')
     parser.add_argument('--milestones', nargs='?', type=str, default='10,20,30',
-                        help='Milestones for LR decreasing')
+                        help='Milestones for LR decreasing when using MultiStepLR')
     parser.add_argument('--momentum', nargs='?', type=float, default=0.9,
                         help='Momentum')
     parser.add_argument('--feature_scale', nargs='?', type=int, default=1,
                         help='Divider for # of features to use')
+
+    # Others -------------------------------------------------------------------
     parser.add_argument('--save_path', nargs='?', type=str, default='.',
                         help='Location where checkpoints are saved')
     parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
