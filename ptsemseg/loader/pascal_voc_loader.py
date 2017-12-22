@@ -55,7 +55,7 @@ class pascalVOCLoader(data.Dataset):
         if self.transform is not None:
             img, lbl = self.transform(img, lbl)
 
-        return img, lbl
+        return img, lbl.squeeze()
 
     def loader(self, path, rgb=True):
         # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)

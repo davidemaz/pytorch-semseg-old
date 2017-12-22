@@ -167,11 +167,13 @@ if __name__ == '__main__':
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
     loader = data_loader(data_path, split=args.split,
-                                    is_transform=True,
-                                    img_size=(args.img_rows, args.img_cols))
+                                    transform=val_transforms)
+
     args.n_classes = loader.n_classes
     valloader = data.DataLoader(loader, batch_size=args.batch_size,
-                                        num_workers=args.num_workers)
+                                        num_workers=args.num_workers,
+                                        shuffle=False,
+                                        pin_memory=True)
 
     # Setup Model
     model = get_model(args)

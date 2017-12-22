@@ -190,7 +190,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         # sample to lighten evaluation
         sample_idx = random.randint(0,batch_size-1)
         pred = outputs.data[sample_idx,:,:,:].max(0)[1].cpu().numpy()
-        gt = labels.data[sample_idx,:,:].squeeze().cpu().numpy()
+        gt = labels.data[sample_idx,:,:].cpu().numpy()
         values = metrics.compute(args.metrics, gt, pred)
         multimeter.update(values, batch_size)
         eval_time.update(time.perf_counter() - start_eval_time)
