@@ -37,10 +37,7 @@ def adjust_learning_rate(optimizer, init_lr, epoch):
     for param_group in optimizer.param_groups:
         param_group['lr'] = lr
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, filename='checkpoint.pth.tar'):
     if not os.path.exists(os.path.dirname(filename)):
         os.makedirs(os.path.dirname(filename))
     torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, os.path.join(os.path.dirname(filename),
-                                               'model_best.pth.tar'))

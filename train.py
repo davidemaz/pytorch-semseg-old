@@ -133,16 +133,25 @@ def main(args):
         curr_metric_value = valmetrics['metrics'].meters[0].avg
         is_best = curr_metric_value > best_metric_value
         best_metric_value = max(curr_metric_value, best_metric_value)
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'args': args,
-            'state_dict': model.module.state_dict(),
-            'best_metric_value': best_metric_value,
-            'optimizer': optimizer.state_dict(),
-        }, is_best, os.path.join(args.save_path,
-                                 "{}_{}_{}.pth".format(args.arch,
-                                                       args.dataset,
-                                                       epoch)))
+        if epoch % args.save_every == 0 and epoch != 0:
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'args': args,
+                'state_dict': model.module.state_dict(),
+                'best_metric_value': best_metric_value,
+                'optimizer': optimizer.state_dict(),
+            }, os.path.join(args.save_path,
+                            "{}_{}_{}.pth".format(args.arch,
+                                                  args.dataset,
+                                                  epoch)))
+        if is_best:
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'args': args,
+                'state_dict': model.module.state_dict(),
+                'best_metric_value': best_metric_value,
+                'optimizer': optimizer.state_dict(),
+            }, os.path.join(args.save_path, 'model_best.pth.tar'))
 
     log_file.close()
 
@@ -271,6 +280,8 @@ if __name__ == '__main__':
     # Others -------------------------------------------------------------------
     parser.add_argument('--save_path', nargs='?', type=str, default='.',
                         help='Location where checkpoints are saved')
+    parser.add_argument('--save_every', nargs='?', type=int, default=10,
+                        help='Save model every x epochs.')
     parser.add_argument('--metrics', nargs='?', type=str, default='pixel_acc,iou_class',
                         help='Metrics to compute and show, the first in the list '
                              'is also used to evaluate the best model to save')
