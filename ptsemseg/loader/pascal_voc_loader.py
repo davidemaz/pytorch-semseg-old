@@ -7,25 +7,27 @@ import torchvision
 import numpy as np
 import scipy.misc as m
 import scipy.io as io
+from PIL import Image
 import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from torch.utils import data
+
 
 def get_data_path(name):
     js = open('config.json').read()
     data = json.loads(js)
     return data[name]['data_path']
 
+
 class pascalVOCLoader(data.Dataset):
-    def __init__(self, root, split="train_aug", is_transform=False, img_size=512):
+    def __init__(self, root, split="train_aug", transform=None):
         self.root = root
         self.img_path = os.path.join(root, 'JPEGImages')
         self.lbl_path = os.path.join(root, 'SegmentationClass', 'pre_encoded')
         self.split = split
-        self.is_transform = is_transform
+        self.transform = transform
         self.n_classes = 21
-        self.img_size = img_size if isinstance(img_size, tuple) else (img_size, img_size)
         self.mean = np.array([104.00699, 116.66877, 122.67892])
         self.files = collections.defaultdict(list)
 
@@ -47,38 +49,22 @@ class pascalVOCLoader(data.Dataset):
         img_path = os.path.join(self.img_path, img_name + '.jpg')
         lbl_path = os.path.join(self.lbl_path, img_name + '.png')
 
-        img = m.imread(img_path)
-        img = np.array(img, dtype=np.uint8)
+        img = self.loader(img_path, True)
+        lbl = self.loader(lbl_path, False)
 
-        lbl = m.imread(lbl_path)
-        lbl = np.array(lbl, dtype=np.int32)
-
-        if self.is_transform:
+        if self.transform is not None:
             img, lbl = self.transform(img, lbl)
 
         return img, lbl
 
-
-    def transform(self, img, lbl):
-        img = img[:, :, ::-1]
-        img = img.astype(np.float64)
-        img -= self.mean
-        img = m.imresize(img, (self.img_size[0], self.img_size[1]))
-        # Resize scales images from 0 to 255, thus we need
-        # to divide by 255.0
-        img = img.astype(float) / 255.0
-        # NHWC -> NCWH
-        img = img.transpose(2, 0, 1)
-
-        lbl[lbl==255] = 0
-        lbl = lbl.astype(float)
-        lbl = m.imresize(lbl, (self.img_size[0], self.img_size[1]), 'nearest', mode='F')
-        lbl = lbl.astype(int)
-
-        img = torch.from_numpy(img).float()
-        lbl = torch.from_numpy(lbl).long()
-        return img, lbl
-
+    def loader(self, path, rgb=True):
+        # open path as file to avoid ResourceWarning (https://github.com/python-pillow/Pillow/issues/835)
+        with open(path, 'rb') as f:
+            img = Image.open(f)
+            if rgb:
+                return img.convert('RGB')
+            else:
+                return img.convert('L')
 
     def get_pascal_labels(self):
         return np.asarray([[0,0,0], [128,0,0], [0,128,0], [128,128,0], [0,0,128], [128,0,128],

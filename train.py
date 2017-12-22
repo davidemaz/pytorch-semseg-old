@@ -7,6 +7,7 @@ import random
 import time
 import math
 
+from PIL import Image
 import numpy as np
 import torch.nn as nn
 import torch.backends.cudnn as cudnn
@@ -23,6 +24,7 @@ from ptsemseg.metrics import AverageMeter
 from ptsemseg.metrics import MultiAverageMeter
 from ptsemseg.metrics import Metrics
 from ptsemseg.utils import save_checkpoint
+from ptsemseg.loader import transforms
 from validate import validate
 
 best_metric_value = 0
@@ -32,13 +34,25 @@ vis = visdom.Visdom()
 def main(args):
     global best_metric_value
 
+    train_transforms = transforms.Compose([transforms.Resize(256),
+                                           transforms.RandomHorizontalFlip(),
+                                           transforms.RandomRotation(10, resample=Image.BILINEAR),
+                                           transforms.RandomResizedCrop(256, scale=(0.5, 2), ratio=(1, 1)),
+                                           transforms.ToTensor(),
+                                           transforms.Normalize(mean=[122.67892, 104.00699, 116.66877],
+                                                                std=[1.0, 1.0, 1.0])])
+
+    val_transforms = transforms.Compose([transforms.Resize(256),
+                                         transforms.CenterCrop(256),
+                                         transforms.ToTensor(),
+                                         transforms.Normalize(mean=[122.67892, 104.00699, 116.66877],
+                                                              std=[1.0, 1.0, 1.0])])
+
     # Setup Dataset and Dataloader
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
     # Train
-    train_dataset = data_loader(data_path,
-                         is_transform=True,
-                         img_size=(args.img_rows, args.img_cols))
+    train_dataset = data_loader(data_path,transform=train_transforms)
     args.n_classes = train_dataset.n_classes
     trainloader = data.DataLoader(train_dataset,
                                   batch_size=args.batch_size,
@@ -48,8 +62,7 @@ def main(args):
     # Validation
     val_dataset = data_loader(data_path,
                       split='val',
-                      is_transform=True,
-                      img_size=(args.img_rows, args.img_cols))
+                      transform=val_transforms)
     valloader = data.DataLoader(val_dataset,
                              batch_size=args.batch_size,
                              num_workers=args.num_workers,
@@ -192,7 +205,7 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         # sample to lighten evaluation
         sample_idx = random.randint(0,batch_size-1)
         pred = outputs.data[sample_idx,:,:,:].max(0)[1].cpu().numpy()
-        gt = labels.data[sample_idx,:,:].cpu().numpy()
+        gt = labels.data[sample_idx,:,:].squeeze().cpu().numpy()
         values = metrics.compute(args.metrics, gt, pred)
         multimeter.update(values, batch_size)
         eval_time.update(time.perf_counter() - start_eval_time)

@@ -58,7 +58,12 @@ class ToTensor(object):
         Returns:
             Tensor: Converted image.
         """
-        return F.to_tensor(pic), F.to_tensor(lbl)
+        lbl = torch.ByteTensor(torch.ByteStorage.from_buffer(lbl.tobytes()))
+        lbl = lbl.view(pic.size[1], pic.size[0], 1)
+        # put it from HWC to CHW format
+        # yikes, this transpose takes 80% of the loading time/CPU
+        lbl = lbl.transpose(0, 1).transpose(0, 2).contiguous().long()
+        return F.to_tensor(pic), lbl
 
 
 class ToPILImage(object):
