@@ -75,11 +75,6 @@ def main(args):
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
         cudnn.benchmark = True
-        test_image, test_segmap = train_dataset[0]
-        test_image = Variable(test_image.unsqueeze(0).cuda(0))
-    else:
-        test_image, test_segmap = train_dataset[0]
-        test_image = Variable(test_image.unsqueeze(0))
 
     optimizer = torch.optim.SGD(model.parameters(),
                                 lr=args.lr,
@@ -134,17 +129,6 @@ def main(args):
             win=loss_viswindow,
             update='append')
 
-        # Visualize result
-        test_output = model(test_image)
-        predicted = val_dataset.decode_segmap(test_output[0].cpu().data.numpy().argmax(0))
-        target = val_dataset.decode_segmap(test_segmap.numpy())
-        visdomwin_testinput = vis.image(test_image[0].cpu().data.numpy(),
-                                        opts=dict(title='Input' + str(epoch)))
-        visdomwin_testtarget = vis.image(np.transpose(target, [2,0,1]),
-                                         opts=dict(title='GT' + str(epoch)))
-        visdomwin_testpredicted = vis.image(np.transpose(predicted, [2,0,1]),
-                                            opts=dict(title='Predicted' + str(epoch)))
-
         # Take best and save model
         curr_metric_value = valmetrics['metrics'].meters[0].avg
         is_best = curr_metric_value > best_metric_value
@@ -172,12 +156,13 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
                       exclude_background=args.exclude_background)
 
     # Initialize current epoch log
-    epoch_loss_window = vis.line(X=torch.zeros(1),
-                           Y=torch.zeros(1),
-                           opts=dict(xlabel='minibatches',
-                                     ylabel='Loss',
-                                     title='Epoch {} Training Loss'.format(epoch),
-                                     legend=['Loss']))
+    if epoch==0:
+        epoch_loss_window = vis.line(X=torch.zeros(1),
+                               Y=torch.zeros(1),
+                               opts=dict(xlabel='minibatches',
+                                         ylabel='Loss',
+                                         title='Epoch {} Training Loss'.format(epoch),
+                                         legend=['Loss']))
 
     model.train()
 
@@ -217,11 +202,12 @@ def train(trainloader, model, criterion, optimizer, epoch, args):
         loss.backward()
         optimizer.step()
 
-        vis.line(
-            X=torch.ones(1) * i,
-            Y=torch.Tensor([loss.data[0]]),
-            win=epoch_loss_window,
-            update='append')
+        if epoch==0:
+            vis.line(
+                X=torch.ones(1) * i,
+                Y=torch.Tensor([loss.data[0]]),
+                win=epoch_loss_window,
+                update='append')
 
         batch_log_str = ('Epoch: [{}/{}][{}/{}] '
                         'Time {batch_time.val:.3f} ({batch_time.avg:.3f}) '
