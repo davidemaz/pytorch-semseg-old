@@ -23,6 +23,7 @@ from ptsemseg.loader import get_loader, get_data_path
 from ptsemseg.metrics import AverageMeter
 from ptsemseg.metrics import MultiAverageMeter
 from ptsemseg.metrics import Metrics
+from ptsemseg.loader import transforms
 
 ALPHA = 0.5
 
@@ -66,14 +67,14 @@ def validate(valloader, model, criterion, epoch, args):
             preds.append(pred_)
             # Save Segmentation Masks
             if len(args.segmentation_maps_path) > 0:
-                decoded = loader.decode_segmap(pred_)
+                decoded = val_dataset.decode_segmap(pred_)
                 img_idx = i*images.size(0)+ii
                 img_name = valloader.dataset.files[args.split][img_idx]
                 if args.alpha_blend:
                     orig_img = misc.imread(os.path.join(valloader.dataset.img_path,
                                             img_name + '.jpg'))
-                    orig_img = misc.imresize(orig_img, (loader.img_size[0],
-                                                        loader.img_size[1]))
+                    orig_img = misc.imresize(orig_img, (256,
+                                                        256))
                     out_img = ALPHA * orig_img + (1 - ALPHA) * decoded
                 else:
                     out_img = decoded
@@ -164,16 +165,24 @@ if __name__ == '__main__':
         args.deep_features_size = 1024
 
     # Setup Dataloader
+    val_transforms = transforms.Compose([transforms.Resize(256),
+                                         transforms.CenterCrop(256),
+                                         transforms.ToTensor(),
+                                         transforms.Normalize(mean=[122.67892, 104.00699, 116.66877],
+                                                              std=[1.0, 1.0, 1.0])])
+
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
-    loader = data_loader(data_path, split=args.split,
-                                    transform=val_transforms)
+    val_dataset = data_loader(data_path,
+                      split='val',
+                      transform=val_transforms)
 
-    args.n_classes = loader.n_classes
-    valloader = data.DataLoader(loader, batch_size=args.batch_size,
-                                        num_workers=args.num_workers,
-                                        shuffle=False,
-                                        pin_memory=True)
+    args.n_classes = val_dataset.n_classes
+    valloader = data.DataLoader(val_dataset,
+                             batch_size=args.batch_size,
+                             num_workers=args.num_workers,
+                             shuffle=False,
+                             pin_memory=True)
 
     # Setup Model
     model = get_model(args)
