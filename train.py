@@ -39,14 +39,14 @@ def main(args):
                                            transforms.RandomRotation(10, resample=Image.BILINEAR),
                                            transforms.RandomResizedCrop(256, scale=(0.5, 2), ratio=(1, 1)),
                                            transforms.ToTensor(),
-                                           transforms.Normalize(mean=[122.67892, 104.00699, 116.66877],
-                                                                std=[1.0, 1.0, 1.0])])
+                                           transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                                std=[0.229, 0.224, 0.225])])
 
     val_transforms = transforms.Compose([transforms.Resize(256),
                                          transforms.CenterCrop(256),
                                          transforms.ToTensor(),
-                                         transforms.Normalize(mean=[122.67892, 104.00699, 116.66877],
-                                                              std=[1.0, 1.0, 1.0])])
+                                         transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                              std=[0.229, 0.224, 0.225])])
 
     # Setup Dataset and Dataloader
     data_loader = get_loader(args.dataset)
