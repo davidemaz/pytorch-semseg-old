@@ -168,8 +168,8 @@ if __name__ == '__main__':
     val_transforms = transforms.Compose([transforms.Resize(256),
                                          transforms.CenterCrop(256),
                                          transforms.ToTensor(),
-                                         transforms.Normalize(mean=[122.67892, 104.00699, 116.66877],
-                                                              std=[1.0, 1.0, 1.0])])
+                                         transforms.Normalize(mean=[0.485, 0.456, 0.406],
+                                                              std=[0.229, 0.224, 0.225])])
 
     data_loader = get_loader(args.dataset)
     data_path = get_data_path(args.dataset)
