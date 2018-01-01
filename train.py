@@ -266,7 +266,7 @@ if __name__ == '__main__':
                         help='Batch Size')
     parser.add_argument('--lr', nargs='?', type=float, default=1e-5,
                         help='Learning Rate')
-    parser.add_argument('--lr_policy', nargs='?', type=str, default='PolyLR',
+    parser.add_argument('--lr_policy', nargs='?', type=str, default='MultiStepLR',
                         help='Adopted learning rate policy: MultiStepLR or PolyLR')
     parser.add_argument('--weight_decay', nargs='?', type=float, default=5e-4,
                         help='Weight Decay')
