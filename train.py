@@ -72,6 +72,11 @@ def main(args):
     # Setup Model
     model = get_model(args)
 
+    optimizer = torch.optim.SGD(model.parameters(),
+                                lr=args.lr,
+                                momentum=args.momentum,
+                                weight_decay=args.weight_decay)
+
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
@@ -89,10 +94,6 @@ def main(args):
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
         cudnn.benchmark = True
 
-    optimizer = torch.optim.SGD(model.parameters(),
-                                lr=args.lr,
-                                momentum=args.momentum,
-                                weight_decay=args.weight_decay)
     if args.lr_policy == "MultiStepLR":
         scheduler = MultiStepLR(optimizer, milestones=[int(x) for x in args.milestones.split(',')])
 
