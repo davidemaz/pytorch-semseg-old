@@ -72,6 +72,19 @@ def main(args):
     # Setup Model
     model = get_model(args)
 
+    if args.resume:
+        if os.path.isfile(args.resume):
+            print("=> loading checkpoint '{}'".format(args.resume))
+            checkpoint = torch.load(args.resume)
+            args.start_epoch = checkpoint['epoch']
+            best_metric_value = checkpoint['best_metric_value']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint '{}' (epoch {})"
+                  .format(args.resume, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(args.resume))
+
     if torch.cuda.is_available():
         model = torch.nn.DataParallel(model, device_ids=range(torch.cuda.device_count())).cuda()
         cudnn.benchmark = True
@@ -104,7 +117,7 @@ def main(args):
     log_file.write(log_header + '\n')
 
     # Main training loop
-    for epoch in range(args.n_epoch):
+    for epoch in range(args.start_epoch, args.n_epoch):
 
         trainmetrics = train(trainloader, model, cross_entropy2d, optimizer, epoch, args)
         args.split='val'
@@ -262,6 +275,8 @@ if __name__ == '__main__':
     # Learning hyperparams -----------------------------------------------------
     parser.add_argument('--n_epoch', nargs='?', type=int, default=100,
                         help='# of the epochs')
+    parser.add_argument('--start_epoch', default=0, type=int, metavar='N',
+                        help='manual epoch number (useful on restarts)')
     parser.add_argument('--batch_size', nargs='?', type=int, default=1,
                         help='Batch Size')
     parser.add_argument('--lr', nargs='?', type=float, default=1e-5,
@@ -278,6 +293,8 @@ if __name__ == '__main__':
                         help='Divider for # of features to use')
 
     # Others -------------------------------------------------------------------
+    parser.add_argument('--resume', default='', type=str, metavar='PATH',
+                        help='path to latest checkpoint (default: none)')
     parser.add_argument('--save_path', nargs='?', type=str, default='.',
                         help='Location where checkpoints are saved')
     parser.add_argument('--save_every', nargs='?', type=int, default=10,
