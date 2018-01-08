@@ -34,16 +34,18 @@ vis = visdom.Visdom()
 def main(args):
     global best_metric_value
 
-    train_transforms = transforms.Compose([transforms.Resize(256),
+    train_transforms = transforms.Compose([transforms.Resize(512, minside=False),
                                            transforms.RandomHorizontalFlip(),
                                            transforms.RandomRotation(10, resample=Image.BILINEAR),
-                                           transforms.RandomResizedCrop(256, scale=(0.5, 2), ratio=(1, 1)),
+                                           transforms.PadToSize(480),
+                                           transforms.RandomResizedCrop(480, scale=(0.5, 2), ratio=(1, 1)),
                                            transforms.ToTensor(),
                                            transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                                 std=[0.229, 0.224, 0.225])])
 
-    val_transforms = transforms.Compose([transforms.Resize(256),
-                                         transforms.CenterCrop(256),
+    val_transforms = transforms.Compose([transforms.Resize(512, minside=False),
+                                         transforms.PadToSize(480),
+                                         transforms.CenterCrop(480),
                                          transforms.ToTensor(),
                                          transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                                               std=[0.229, 0.224, 0.225])])
