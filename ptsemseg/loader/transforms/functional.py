@@ -162,7 +162,7 @@ def normalize(tensor, mean, std):
     return tensor
 
 
-def resize(img, size, interpolation=Image.BILINEAR):
+def resize(img, size, interpolation=Image.BILINEAR, minside=True):
     """Resize the input PIL Image to the given size.
 
     Args:
@@ -174,6 +174,8 @@ def resize(img, size, interpolation=Image.BILINEAR):
             (size * height / width, size)
         interpolation (int, optional): Desired interpolation. Default is
             ``PIL.Image.BILINEAR``
+        minside (bool, optional): Whether to resize image based on the minside or
+            maxside. It only works if size is an int.
 
     Returns:
         PIL Image: Resized image.
@@ -185,9 +187,11 @@ def resize(img, size, interpolation=Image.BILINEAR):
 
     if isinstance(size, int):
         w, h = img.size
-        if (w <= h and w == size) or (h <= w and h == size):
+        if minside and ((w <= h and w == size) or (h <= w and h == size)):
             return img
-        if w < h:
+        if not minside and ((w >= h and w == size) or (h >= w and h == size)):
+            return img
+        if (minside and w < h) or (not minside and w > h):
             ow = size
             oh = int(size * h / w)
             return img.resize((ow, oh), interpolation)

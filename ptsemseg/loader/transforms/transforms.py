@@ -136,10 +136,11 @@ class Resize(object):
             ``PIL.Image.BILINEAR``
     """
 
-    def __init__(self, size, interpolation=Image.BILINEAR):
+    def __init__(self, size, interpolation=Image.BILINEAR, minside=True):
         assert isinstance(size, int) or (isinstance(size, collections.Iterable) and len(size) == 2)
         self.size = size
         self.interpolation = interpolation
+        self.minside = minside
 
     def __call__(self, img, lbl):
         """
@@ -149,8 +150,8 @@ class Resize(object):
         Returns:
             PIL Image: Rescaled image.
         """
-        return (F.resize(img, self.size, self.interpolation),
-               F.resize(lbl, self.size, Image.NEAREST))
+        return (F.resize(img, self.size, self.interpolation, self.minside),
+               F.resize(lbl, self.size, Image.NEAREST, self.minside))
 
 
 class Scale(Resize):
