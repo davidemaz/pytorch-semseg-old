@@ -240,6 +240,47 @@ def pad(img, padding, fill=0):
     return ImageOps.expand(img, border=padding, fill=fill)
 
 
+def pad_to_size(img, output_size, fill=0):
+    """Pad the given PIL Image to match output_size.
+
+    Args:
+        img (PIL Image): Image to be padded.
+        output_size (int or tuple): Desired output size. If a single int is provided this
+            is used to pad all borders. If tuple of length 2 is provided this is the padding
+            on left/right and top/bottom respectively.
+        fill: Pixel fill value. Default is 0. If a tuple of
+            length 3, it is used to fill R, G, B channels respectively.
+
+    Returns:
+        PIL Image: Padded image.
+    """
+    if not _is_pil_image(img):
+        raise TypeError('img should be PIL Image. Got {}'.format(type(img)))
+
+    if not isinstance(output_size, (numbers.Number, tuple)):
+        raise TypeError('Got inappropriate output_size arg')
+    if not isinstance(fill, (numbers.Number, str, tuple)):
+        raise TypeError('Got inappropriate fill arg')
+
+    if isinstance(output_size, collections.Sequence) and len(output_size) not in [2]:
+        raise ValueError("output_size must be an int or a 2 element tuple, not a " +
+                         "{} element tuple".format(len(output_size)))
+
+    if isinstance(output_size, int):
+        th, tw = output_size, output_size
+    else:
+        tw, th = output_size
+    w, h = img.size
+    padh = max(th - h, 0)
+    padw = max(tw - w, 0)
+    padding = (int(math.ceil(padw / 2.)),
+               int(math.ceil(padh / 2.)),
+               int(math.floor(padw / 2.)),
+               int(math.floor(padh / 2.)))
+
+    return ImageOps.expand(img, border=padding, fill=fill)
+
+
 def crop(img, i, j, h, w):
     """Crop the given PIL Image.
 

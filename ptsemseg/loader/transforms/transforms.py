@@ -225,6 +225,42 @@ class Pad(object):
                F.pad(lbl, self.padding, self.fill))
 
 
+class PadToSize(object):
+    """Pad the given PIL Image to match output_size.
+
+    Args:
+        img (PIL Image): Image to be padded.
+        output_size (int or tuple): Desired output size. If a single int is provided this
+            is used to pad all borders. If tuple of length 2 is provided this is the padding
+            on left/right and top/bottom respectively.
+        fill: Pixel fill value. Default is 0. If a tuple of
+            length 3, it is used to fill R, G, B channels respectively.
+
+    Returns:
+        PIL Image: Padded image.
+    """
+
+    def __init__(self, output_size, fill=0):
+        assert isinstance(output_size, (numbers.Number, tuple))
+        assert isinstance(fill, (numbers.Number, str, tuple))
+        if isinstance(output_size, collections.Sequence) and len(output_size) not in [2]:
+            raise ValueError("output_size must be an int or a 2 element tuple, not a " +
+                             "{} element tuple".format(len(output_size)))
+
+        self.output_size = output_size
+        self.fill = fill
+
+    def __call__(self, img, lbl):
+        """
+        Args:
+            img (PIL Image): Image to be padded.
+
+        Returns:
+            PIL Image: Padded image.
+        """
+        return (F.pad_to_size(img, self.output_size, self.fill),
+               F.pad_to_size(lbl, self.output_size, self.fill))
+
 class Lambda(object):
     """Apply a user-defined lambda as a transform.
 
